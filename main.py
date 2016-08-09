@@ -36,6 +36,8 @@ def main():
                         help='The Nessus scanner report file(s).')
     parser.add_argument('--openvas-scan', dest='openvas_vulnerability_scan', required=False, nargs='+',
                         help='The OpenVAS scanner report file(s).')
+    parser.add_argument('--generic-scan', dest='generic_vulnerability_scan', required=False, nargs='+',
+                        help='The generic scanner report file(s).')
     parser.add_argument('--flow-matrix-file', dest='flow_matrix_file', required=False,
                         help='The CSV file containing the flow matrix')
     parser.add_argument('--routing-file', dest='routing_file', required=False,
@@ -79,6 +81,10 @@ def main():
     if args.openvas_vulnerability_scan:
         for openvas_scan_file in args.openvas_vulnerability_scan:
             topology.add_openvas_report_information(openvas_scan_file)
+    
+    if args.generic_vulnerability_scan:
+        for generic_scan_file in args.generic_vulnerability_scan:
+            topology.add_generic_report_information(generic_scan_file)
 
     if args.flow_matrix_file:
         topology.flow_matrix = FlowMatrix(topology, args.flow_matrix_file)
