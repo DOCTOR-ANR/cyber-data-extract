@@ -498,28 +498,28 @@ class Topology:
                 if mulval_destination_port and mulval_protocol:
                     if flow_matrix_line.source_element.type == FlowMatrixLineElement.IP and flow_matrix_line.destination_element.type == FlowMatrixLineElement.IP:
                         mulval_input_file.write(
-                            "haclprimit('" + flow_matrix_line.source_element.resource + "','" + flow_matrix_line.destination_element.resource + "'," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "haclprimit('" + flow_matrix_line.source_element.resource + "','" + flow_matrix_line.destination_element.resource + "'," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.INTERNET and flow_matrix_line.destination_element.type == FlowMatrixLineElement.IP:
                         mulval_input_file.write(
-                            "vlanToIP(internet,'" + flow_matrix_line.destination_element.resource + "'," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "vlanToIP(internet,'" + flow_matrix_line.destination_element.resource + "'," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.VLAN and flow_matrix_line.destination_element.type == FlowMatrixLineElement.IP:
                         mulval_input_file.write(
-                            "vlanToIP('" + flow_matrix_line.source_element.resource.name + "','" + flow_matrix_line.destination_element.resource + "'," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "vlanToIP('" + flow_matrix_line.source_element.resource.name + "','" + flow_matrix_line.destination_element.resource + "'," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.IP and flow_matrix_line.destination_element.type == FlowMatrixLineElement.VLAN:
                         mulval_input_file.write(
-                            "ipToVlan('" + flow_matrix_line.source_element.resource + "','" + flow_matrix_line.destination_element.resource.name + "'," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "ipToVlan('" + flow_matrix_line.source_element.resource + "','" + flow_matrix_line.destination_element.resource.name + "'," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.INTERNET and flow_matrix_line.destination_element.type == FlowMatrixLineElement.VLAN:
                         mulval_input_file.write(
-                            "vlanToVlan(internet,'" + flow_matrix_line.destination_element.resource.name + "'," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "vlanToVlan(internet,'" + flow_matrix_line.destination_element.resource.name + "'," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.VLAN and flow_matrix_line.destination_element.type == FlowMatrixLineElement.VLAN:
                         mulval_input_file.write(
-                            "vlanToVlan('" + flow_matrix_line.source_element.resource.name + "','" + flow_matrix_line.destination_element.resource.name + "'," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "vlanToVlan('" + flow_matrix_line.source_element.resource.name + "','" + flow_matrix_line.destination_element.resource.name + "'," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.IP and flow_matrix_line.destination_element.type == FlowMatrixLineElement.INTERNET:
                         mulval_input_file.write(
-                            "ipToVlan('" + flow_matrix_line.source_element.resource + "', internet," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "ipToVlan('" + flow_matrix_line.source_element.resource + "', internet," + mulval_protocol + "," + mulval_destination_port + ").\n")
                     elif flow_matrix_line.source_element.type == FlowMatrixLineElement.VLAN and flow_matrix_line.destination_element.type == FlowMatrixLineElement.INTERNET:
                         mulval_input_file.write(
-                            "vlanToVlan('" + flow_matrix_line.source_element.resource.name + "', internet," + mulval_destination_port + "," + mulval_protocol + ").\n")
+                            "vlanToVlan('" + flow_matrix_line.source_element.resource.name + "', internet," + mulval_protocol + "," + mulval_destination_port + ").\n")
                 else:
                     logging.warning("Unknown port or protocol : line skipped - port :" + mulval_destination_port + " - protocol : " + mulval_protocol)
 
