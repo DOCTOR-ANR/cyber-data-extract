@@ -291,6 +291,8 @@ class Topology:
                 protocol = report_item.attrib['protocol'].lower()
 
                 service = Service(svc_name, host_name_or_ip, port, protocol)
+                if port == 0:
+                    service.set_global_name(host.name)
 
                 logging.debug(
                     "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -346,6 +348,8 @@ class Topology:
             protocol = port_and_prot[1]
 
             service = Service(svc_name, host_name_or_ip, port, protocol)
+            if port == 0:
+                service.set_global_name(host.name)
 
             logging.debug(
                     "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -395,6 +399,12 @@ class Topology:
                 protocol = host_service["serviceProto"].lower()
 
                 service = Service(svc_name, host_name_or_ip, port, protocol)
+                if port == 0:
+                    if "global_name" in host_service:
+                        service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
+                    else:
+                        logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
+                        service.set_global_name(host.name)
 
                 logging.debug(
                         "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -444,10 +454,31 @@ class Topology:
             for service in host.services:
                 assert isinstance(service, Service)
                 svc_name = service.name
+                global_name = service.global_name
                 port = service.port
                 protocol = service.protocol
 
-                mulval_input_file.write("/* " + svc_name + " */\n")
+                mulval_input_file.write("/* " + svc_name + " (" + global_name + ") */\n")
+                
+                if port == 0 and global_name != "":
+                    svc_user = "user"
+                    mulval_input_file.write(
+                        "localServiceInfo('" + global_name + "', '" + hostname + "', '" + svc_name + "', '" + svc_user + "').\n")
+                        
+                    for vulnerability in service.vulnerabilities:
+                        assert isinstance(vulnerability, Vulnerability)
+                        if vulnerability.cvss.access_vector == "NETWORK":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', remoteExploit, privEscalation).\n")
+
+                        elif vulnerability.cvss.access_vector == "LOCAL":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', localExploit, privEscalation).\n")
+                            #TODO (priority low): only add this line once for all hosts.
 
                 if port >= 0 and protocol in ["tcp", "udp", "icmp"]:
                     # svc_user = svc_name + "_user"
@@ -840,6 +871,7 @@ class Interface:
 class Service:
     def __init__(self, name, ip, port, protocol):
         self._name = name
+        self._global_name = ""
         self._ip = ip
         self._port = port
         self._protocol = protocol
@@ -863,8 +895,10 @@ class Service:
         else:
             logging.warning(
                 "The vulnerability " + vulnerability + " has not been found in the vulnerability database and will be ignored.")
-
-
+    
+    def set_global_name(self, n):
+        self._global_name = n
+    
     @property
     def port(self):
         return self._port
@@ -876,6 +910,10 @@ class Service:
     @property
     def protocol(self):
         return self._protocol
+    
+    @property    
+    def global_name(self):
+        return self._global_name
 
     def to_fiware_topology_xml_element(self):
         element = ET.Element('service')
