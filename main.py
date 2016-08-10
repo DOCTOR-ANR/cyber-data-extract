@@ -42,6 +42,8 @@ def main():
                         help='The CSV file containing the flow matrix')
     parser.add_argument('--routing-file', dest='routing_file', required=False,
                         help='The CSV file containing the routing informations')
+    parser.add_argument('--vm-mapping-file', dest='vm_mapping_file', required=False, nargs='+',
+                        help='The CSV file containing the VM placement on physical hosts')
 
     parser.add_argument('--mulval-output-file', dest='mulval_output_file', required=False,
                         help='The output path where the mulval input file will be stored.')
@@ -88,6 +90,10 @@ def main():
 
     if args.flow_matrix_file:
         topology.flow_matrix = FlowMatrix(topology, args.flow_matrix_file)
+        
+    if args.vm_mapping_file:
+        for vm_map_file in args.vm_mapping_file:
+            topology.load_vm_mpping_file(vm_map_file)
 
     if args.routing_file:
         topology.load_routing_file(args.routing_file)

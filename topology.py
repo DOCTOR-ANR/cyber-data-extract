@@ -256,6 +256,30 @@ class Topology:
                         else:
                             logging.warning("Did not find in the topology a host named : " + host_name)
 
+    def load_vm_mpping_file(self, vm_map_file_path):
+        if vm_map_file_path:
+            logging.info("[ ] Load VM placement from CSV file")
+            
+        with open(vm_map_file_path) as csv_map_file:
+                csv_map = csv.reader(csv_map_file, delimiter=';')
+                for csv_map_line in csv_map:
+                    if (len(csv_map_line) < 3) or csv_map_line[0] == "vm":
+                        logging.warning("Line not parsed in VM MAPPING input file :\"" + ';'.join(csv_map_line) + "\"")
+                    else:
+                        host_name = csv_map_line[0]
+                        host_physical = csv_map_line[1]
+                        process = csv_map_line[2]
+                        if len(csv_map_line) > 3:
+                            user = csv_map_line[3]
+                        else:
+                            user = "root"
+                            
+                        host = self.get_host_by_name(host_name)
+                        if host:
+                            host.add_physical_machine(host_physical, process, user)
+                        else:
+                            logging.warning("Did not find in the topology a host named : " + host_name)
+    
     def add_nessus_report_information(self, nessus_file_path):
         logging.info("Loading in memory the vulnerability database")
         vulnerability_database = load_vulnerability_database()
@@ -441,6 +465,10 @@ class Topology:
             hostname = host.name
             mulval_input_file.write("attackerLocated('" + hostname + "').\n")
             mulval_input_file.write("attackGoal(execCode('" + hostname + "',_)).\n")
+            
+            # if it's a VM, add the host mapping
+            if host.physical_host != "" and host.physical_user != "" and host.physical_process != "":
+                mulval_input_file.write("vmOnHost('" + hostname + "','" + host.physical_host + "','" + host.physical_process + "','" + host.physical_user + "').\n")
 
             for interface in host.interfaces:
                 mulval_input_file.write("hasIP('" + hostname + "','" + interface.ip + "').\n")
@@ -733,6 +761,9 @@ class Host:
         self._routing_table = RoutingTable(self)
         if first_interface_name and first_interface_ip:
             self.add_interface(first_interface_name, first_interface_ip)
+        self._physical_host = ""
+        self._physical_process = ""
+        self._physical_user = ""
 
     @property
     def services(self):
@@ -752,10 +783,27 @@ class Host:
     @property
     def interfaces(self):
         return self._interfaces
+        
+    @property
+    def physical_host(self):
+        return self._physical_host
+        
+    @property
+    def physical_process(self):
+        return self._physical_process
+        
+    @property
+    def physical_user(self):
+        return self._physical_user
 
     def add_interface(self, interface_name, interface_ip):
         interface = Interface(interface_name, interface_ip, self)
         self._interfaces.append(interface)
+        
+    def add_physical_machine(self, host_physical, process, user):
+        self._physical_host = host_physical
+        self._physical_process = process
+        self._physical_user = user
 
     def get_interface_by_ip_address(self, interface_ip):
         for interface in self.interfaces:
