@@ -280,6 +280,25 @@ class Topology:
                         else:
                             logging.warning("Did not find in the topology a host named : " + host_name)
     
+    def load_control_file(self, control_file_path):
+        if control_file_path:
+            logging.info("[ ] Load controllers / orchestrators domains from CSV file")
+            
+        with open(control_file_path) as csv_control_file:
+                csv_control = csv.reader(csv_control_file, delimiter=';')
+                for csv_control_line in csv_control:
+                    if (len(csv_control_line) < 2) or csv_control_line[0] == "host":
+                        logging.warning("Line not parsed in controllers / orchestrators domains input file :\"" + ';'.join(csv_control_line) + "\"")
+                    else:
+                        host_name = csv_control_line[0]
+                        controller_name = csv_control_line[1]
+                            
+                        host = self.get_host_by_name(host_name)
+                        if host:
+                            host.add_controller(controller_name)
+                        else:
+                            logging.warning("Did not find in the topology a host named : " + host_name)
+    
     def add_nessus_report_information(self, nessus_file_path):
         logging.info("Loading in memory the vulnerability database")
         vulnerability_database = load_vulnerability_database()
@@ -469,7 +488,12 @@ class Topology:
             # if it's a VM, add the host mapping
             if host.physical_host != "" and host.physical_user != "" and host.physical_process != "":
                 mulval_input_file.write("vmOnHost('" + hostname + "','" + host.physical_host + "','" + host.physical_process + "','" + host.physical_user + "').\n")
-
+                
+            # add controllers whose domain the host is in
+            for controller in host.controllers:
+                mulval_input_file.write("vmInDomain('" + hostname + "','" + controller + "').\n")
+            
+            # Add interfaces
             for interface in host.interfaces:
                 mulval_input_file.write("hasIP('" + hostname + "','" + interface.ip + "').\n")
                 if interface.vlan:
@@ -757,6 +781,7 @@ class Host:
         self._name = name
         self._services = []
         self._interfaces = []
+        self._controllers = []
         self._security_requirement = 0
         self._routing_table = RoutingTable(self)
         if first_interface_name and first_interface_ip:
@@ -785,6 +810,10 @@ class Host:
         return self._interfaces
         
     @property
+    def controllers(self):
+        return self._controllers
+        
+    @property
     def physical_host(self):
         return self._physical_host
         
@@ -799,6 +828,9 @@ class Host:
     def add_interface(self, interface_name, interface_ip):
         interface = Interface(interface_name, interface_ip, self)
         self._interfaces.append(interface)
+        
+    def add_controller(self, controller_name):
+        self._controllers.append(controller_name)
         
     def add_physical_machine(self, host_physical, process, user):
         self._physical_host = host_physical
