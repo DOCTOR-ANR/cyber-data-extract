@@ -875,6 +875,15 @@ class Host:
         machine_name.text = self.name
         security_requirement_element = ET.SubElement(element, 'security_requirement')
         security_requirement_element.text = str(self.security_requirement)
+        if self._physical_host != "":
+            physical_host_element = ET.SubElement(element, 'physical_host')
+            physical_host_element.text = self._physical_host
+            
+        if len(self._controllers) > 0:
+            controllers_element = ET.SubElement(element, 'controllers')
+            for controller in self._controllers:
+                controller_element = ET.SubElement(controllers_element, 'controller')
+                controller_element.text = controller
 
         interfaces_element = ET.SubElement(element, 'interfaces')
 
@@ -1005,6 +1014,9 @@ class Service:
         service_protocol.text = self.protocol
         service_port = ET.SubElement(element, 'port')
         service_port.text = str(self.port)
+        if self._global_name != "":
+            global_name_element = ET.SubElement(element, 'global_name')
+            global_name_element.text = self._global_name
 
         if len(self.vulnerabilities) > 0:
             vulnerabilities_element = ET.SubElement(element, 'vulnerabilities')
