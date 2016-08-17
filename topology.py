@@ -102,7 +102,7 @@ class Topology:
             logging.warning("The ip address " + ip_address + " should exist on the host " + host_name)
         else:
             self.add_interface_to_vlan(interface)
-        if connectedToWAN:
+        if connectedToWAN == "True" or connectedToWAN == "true" :
             interface.set_connected_to_wan()
         host._security_requirement = security_requirement
         return host
