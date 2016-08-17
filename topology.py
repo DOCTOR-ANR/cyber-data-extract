@@ -269,10 +269,10 @@ class Topology:
                         host_name = csv_map_line[0]
                         host_physical = csv_map_line[1]
                         process = csv_map_line[2]
+                        user = "root"
                         if len(csv_map_line) > 3:
                             user = csv_map_line[3]
-                        else:
-                            user = "root"
+                            
                             
                         host = self.get_host_by_name(host_name)
                         if host:
@@ -877,7 +877,12 @@ class Host:
         security_requirement_element.text = str(self.security_requirement)
         if self._physical_host != "":
             physical_host_element = ET.SubElement(element, 'physical_host')
-            physical_host_element.text = self._physical_host
+            ph_host_element = ET.SubElement(physical_host_element, 'hostname')
+            ph_hypervisor_element = ET.SubElement(physical_host_element, 'hypervisor')
+            ph_user_element = ET.SubElement(physical_host_element, 'user')
+            ph_host_element.text = self._physical_host
+            ph_hypervisor_element.text = self._physical_process
+            ph_user_element.text = self._physical_user
             
         if len(self._controllers) > 0:
             controllers_element = ET.SubElement(element, 'controllers')
