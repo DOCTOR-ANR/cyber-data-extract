@@ -177,7 +177,7 @@ class Topology:
             logging.info("The ip address " + interface.ip + " can not be assigned to a vlan")
         elif number_added_vlans_to_interface > 1:
             logging.warning("The ip address " + interface.ip + " has been assigned to " + str(
-                number_added_vlans_to_interface) + " vlans :" + str(added_vlans))
+                number_added_vlans_to_interface) + " vlans :" + str(added_vlans)) 
 
     def load_from_topological_input_files(self, hosts_interfaces_csv_file_path, hosts_vlans_csv_file_path=None):
         logging.info("Loading the topological information...")
@@ -781,6 +781,7 @@ class Host:
         self._name = name
         self._services = []
         self._interfaces = []
+        self._faces = [] 
         self._controllers = []
         self._security_requirement = 0
         self._routing_table = RoutingTable(self)
@@ -808,6 +809,10 @@ class Host:
     @property
     def interfaces(self):
         return self._interfaces
+    
+    @property
+    def faces(self):
+        return self._faces
         
     @property
     def controllers(self):
@@ -828,6 +833,13 @@ class Host:
     def add_interface(self, interface_name, interface_ip):
         interface = Interface(interface_name, interface_ip, self)
         self._interfaces.append(interface)
+        
+    def add_face(self, face_name):
+        face = Face(face_name, self)
+        self._faces.append(face)
+        
+    def add_face_linked_host(self, face, distant_host, distant_host_face):
+        
         
     def add_controller(self, controller_name):
         self._controllers.append(controller_name)
@@ -894,7 +906,12 @@ class Host:
 
         for interface in self.interfaces:
             interfaces_element.append(interface.to_fiware_topology_xml_element())
-
+        
+        faces_element = ET.SubElement(element, 'faces')
+        
+        for face in self.faces:
+            faces_element.append(face.to_fiware_topology_xml_element())
+        
         services_element = ET.SubElement(element, 'services')
         for service in self.services:
             services_element.append(service.to_fiware_topology_xml_element())
@@ -960,6 +977,25 @@ class Interface:
             internet_element = ET.SubElement(directly_connected_element, 'internet')
 
         return element
+
+class Face:
+    def __init__(self, host_name, face_name):
+        self.host_name = host_name
+        self.face_name = face_name
+        self.face_link = []
+        
+    @property
+    def host_name(self):
+        return self._host_name
+    
+    @property
+    def face_name(self):
+        return self._face_tag
+
+    @property
+    def face_link(self):
+        return self._face_link
+    
 
 
 class Service:
@@ -1278,8 +1314,7 @@ class PortRange:
             self.to_port = int(port_range_string)
         else:
             logging.warning(
-                "The folowing port range string is not valid and as not been parsed so it is beeing ignored. :" + port_range_string)
-
+                "The folowing port range string is not valid and as not been parsed so it is beeing ignored. :" + port_range_string)      
 
 def indent_xml(elem, level=0):
     i = "\n" + level * "  "
