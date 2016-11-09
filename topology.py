@@ -79,6 +79,10 @@ class Topology:
         else:
             self.add_interface_to_vlan(interface)
         return host
+        
+    def add_unknown_host_by_name(self, host_name):
+        host = self.add_host("Unknown_host_" + host_name)
+        return host
 
     def get_host_by_name(self, host_name):
         for host in self.hosts:
@@ -425,13 +429,13 @@ class Topology:
             
         # For all hosts
         for report_host in report["hosts"]:
-            host_name_or_ip = report_host["firstIP"]
-            logging.info("Found host in generic report '" + host_name_or_ip + "'")
-            host = self.get_host_by_ip(host_name_or_ip)
+            host_name = report_host["name"]
+            logging.info("Found host in generic report '" + host_name + "'")
+            host = self.get_host_by_name(host_name)
             if not host:
                 logging.warning(
-                    "Host '" + host_name_or_ip + "' was not found in the topology. Added it as unknown host.")
-                host = self.add_unknown_host_by_name(host_name_or_ip)
+                    "Host '" + host_name + "' was not found in the topology. Added it as unknown host.")
+                host = self.add_unknown_host_by_name(host_name)
 
             number_of_treated_host += 1
 
@@ -440,20 +444,24 @@ class Topology:
                 port = host_service["servicePort"]
                 svc_name = host_service["serviceName"]
                 protocol = host_service["serviceProto"].lower()
+                
+                # Add service to all interfaces of the host
+                for interface in host.interfaces:
+                    my_ip = interface.ip.lower()
 
-                service = Service(svc_name, host_name_or_ip, port, protocol)
-                if port == 0:
-                    if "global_name" in host_service:
-                        service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
-                    else:
-                        logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
-                        service.set_global_name(host.name)
+                    service = Service(svc_name, my_ip, port, protocol)
+                    if port == 0:
+                        if "global_name" in host_service:
+                            service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
+                        else:
+                            logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
+                            service.set_global_name(host.name)
 
-                logging.debug(
-                        "Vulnerable service : '" + svc_name + "' exposed on port " + str(
-                            port) + " using protocol " + protocol)
+                    logging.debug(
+                            "Vulnerable service : '" + svc_name + "' exposed on port " + str(
+                                port) + " using protocol " + protocol)
 
-                host.add_service(service)
+                    host.add_service(service)
 
                 #Vulnerabilities for this service
                 for cve_item in host_service["vulnerabilities"]:
