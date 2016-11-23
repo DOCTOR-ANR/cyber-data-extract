@@ -496,20 +496,10 @@ class Topology:
             
         # For all hosts
         for report_host in report["hosts"]:
-<<<<<<< HEAD
             host_name = report_host["name"]
             logging.info("Found host in generic report '" + host_name + "'")
             host = self.get_host_by_name(host_name)
-=======
-            if not report_host["firstIP"]:
-                host_name_or_ip = report_host["name"]
-                logging.info("Found host in generic report '" + host_name_or_ip + "'")
-                host = self.get_host_by_name(host_name_or_ip)
-            else:
-                host_name_or_ip = report_host["firstIP"]
-                logging.info("Found host in generic report '" + host_name_or_ip + "'")
-                host = self.get_host_by_ip(host_name_or_ip)
->>>>>>> ndn
+
             if not host:
                 logging.warning(
                     "Host '" + host_name + "' was not found in the topology. Added it as unknown host.")
@@ -1122,6 +1112,96 @@ class NdnLink:
         face_distant_name.text = self.face_distant
         
         return element  
+
+class NdnService:
+    def __init__(self, name, fce, port, protocol):
+        self._name = name
+        self._global_name = ""
+        self._fce = fce
+        self._port = port
+        self._protocol = protocol
+        self._vulnerabilities = []
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def vulnerabilities(self):
+        """
+        :return: List[Vulnerability] the list of vulnerabilities of this service
+        """
+        return self._vulnerabilities
+
+    def add_vulnerability(self, vulnerability, vulnerability_database):
+        topology_vulnerability = vulnerability_database.get(vulnerability)
+        if topology_vulnerability:
+            self._vulnerabilities.append(topology_vulnerability)
+        else:
+            logging.warning(
+                "The vulnerability " + vulnerability + " has not been found in the vulnerability database and will be ignored.")
+    
+    def set_global_name(self, n):
+        self._global_name = n
+    
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def fce(self):
+        return self._fce
+
+    @property
+    def protocol(self):
+        return self._protocol
+    
+    @property    
+    def global_name(self):
+        return self._global_name
+
+    def to_fiware_topology_xml_element(self):
+        element = ET.Element('service')
+        service_name = ET.SubElement(element, 'name')
+        service_name.text = self.name
+        service_fce = ET.SubElement(element, 'face')
+        service_fce.text = self.fce
+        service_protocol = ET.SubElement(element, 'protocol')
+        service_protocol.text = self.protocol
+        service_port = ET.SubElement(element, 'port')
+        service_port.text = str(self.port)
+        if self._global_name != "":
+            global_name_element = ET.SubElement(element, 'global_name')
+            global_name_element.text = self._global_name
+
+        if len(self.vulnerabilities) > 0:
+            vulnerabilities_element = ET.SubElement(element, 'vulnerabilities')
+            for vulnerability in self.vulnerabilities:
+                vulnerability_element = ET.SubElement(vulnerabilities_element, 'vulnerability')
+                access_vector = vulnerability.cvss.access_vector
+                if access_vector == "LOCAL":
+                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                    vulnerability_type.text = "localExploit"
+                elif access_vector == "NETWORK":
+                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                    vulnerability_type.text = "remoteExploit"
+                elif access_vector == "SIGNATURE":
+                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                    vulnerability_type.text = "signatureExploit"
+                    
+                vulnerability_cve = ET.SubElement(vulnerability_element, 'cve')
+                vulnerability_cve.text = str(vulnerability.cve)
+                vulnerability_goal = ET.SubElement(vulnerability_element, 'goal')
+                if access_vector == "LOCAL" or access_vector == "NETWORK":   
+                    vulnerability_goal.text = "privEscalation"
+                elif access_vector == "SIGNATURE":
+                    vulnerability_goal.text = "cachedPoisonned"
+                vulnerability_cvss = ET.SubElement(vulnerability_element, 'cvss')
+                vulnerability_cvss.text = str(vulnerability.cvss.score)
+
+        return element
+
+
 
 class Service:
     def __init__(self, name, ip, port, protocol):
