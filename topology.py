@@ -42,6 +42,7 @@ class Topology:
         self._vlans = []
         self._zones = []  # contains only the "zones : parents of real vlans"
         self._hosts = []
+        self._ndn_links = []
         self._services = []
         self.flow_matrix = None
 
@@ -58,13 +59,27 @@ class Topology:
         return self._zones
 
     @property
+    def ndn_links(self):
+        return self._ndn_links
+    
+    @property
     def vulnerabilities(self):
         vulnerabilities = {}
         for host in self.hosts:
             for cve, vulnerability in host.vulnerabilities.items():
                 vulnerabilities[vulnerability.cve] = vulnerability
         return vulnerabilities
-
+    
+    def add_ndn_link(self, host_local, face_local, host_distant, face_distant):
+        ndn_link = NdnLink(host_local, face_local, host_distant, face_distant)
+        self._ndn_links.append(ndn_link)
+        
+    def get_ndn_link_by_dst(self, host_loc, host_dist):
+        for ndn_link in self.ndn_links:
+            if ndn_link.host_local == host_loc and ndn_link.host_distant == host_dist:
+                return ndn_link
+        return None
+        
     def get_host_by_ip(self, host_ip):
         for host in self.hosts:
             if host.has_ip(host_ip):
@@ -181,8 +196,12 @@ class Topology:
             logging.info("The ip address " + interface.ip + " can not be assigned to a vlan")
         elif number_added_vlans_to_interface > 1:
             logging.warning("The ip address " + interface.ip + " has been assigned to " + str(
-                number_added_vlans_to_interface) + " vlans :" + str(added_vlans))
-
+                number_added_vlans_to_interface) + " vlans :" + str(added_vlans)) 
+    
+#     def add_ndn_link(self, src_host, src_face, dst_host, dst_face):
+#         ndn_link = NdnLink(src_host, src_face, dst_host, dst_face)
+#         self.ndn_links.append(ndn_link) 
+    
     def load_from_topological_input_files(self, hosts_interfaces_csv_file_path, hosts_vlans_csv_file_path=None):
         logging.info("Loading the topological information...")
 
@@ -303,6 +322,54 @@ class Topology:
                         else:
                             logging.warning("Did not find in the topology a host named : " + host_name)
     
+    def load_ndn_topology_file(self, ndn_topology_path):
+        if ndn_topology_path:
+            logging.info(" [ ] Load NDN topology from the CSV file")
+            
+        with open(ndn_topology_path) as csv_ndn_topology_file:
+            csv_ndn_topology = csv.reader(csv_ndn_topology_file, delimiter=';')
+            for csv_ndn_topology_line in csv_ndn_topology:
+                if (len(csv_ndn_topology_line) < 2) or csv_ndn_topology_line[0] == "source":
+                    logging.warning("Line not parsed in NDN topology input file :\"" + ';'.join(csv_ndn_topology_line) + "\"")
+                else:
+                    host_local = csv_ndn_topology_line[0]
+                    face_local = csv_ndn_topology_line[1]
+                    host_distant = csv_ndn_topology_line[2]
+                    face_distant = csv_ndn_topology_line[3]
+
+                    host_ndn_loc = self.get_host_by_name(host_local)
+                    
+                    if not host_ndn_loc:
+                        host_ndn_loc = Host(host_local)
+                        host_ndn_loc.add_face(face_local)
+                        self.hosts.append(host_ndn_loc)
+                    else:
+                        for face in host_ndn_loc.faces:
+                            if face.face_name == face_local:
+                                logging.info("The host NDN : " + host_ndn_loc + "with the face : " + face_local + " is already in the topology.")         
+                        else:
+                            host_ndn_loc.add_face(face_local)
+                    
+                    host_ndn_dst = self.get_host_by_name(host_distant)
+                    
+                    if not host_ndn_dst:
+                        host_ndn_dst = Host(host_distant)
+                        host_ndn_dst.add_face(face_distant)
+                        self.hosts.append(host_ndn_dst)
+                    else:
+                        for face in host_ndn_dst.faces:
+                            if face.face_name == face_distant:
+                                logging.info("The host NDN : " + host_ndn_dst + "with the face : " + face_distant + " is already in the topology.")         
+                        else:
+                            host_ndn_dst.add_face(face_distant)
+
+                    ndn_link = self.get_ndn_link_by_dst(host_ndn_loc, host_ndn_dst)                       
+                     
+                    if ndn_link not in self.ndn_links:
+                        self.add_ndn_link(host_ndn_loc, face_local, host_ndn_dst, face_distant)
+                    else:
+                        logging.info("The NDN link between " + host_ndn_loc + " and " + host_ndn_dst + " is already in the topology")
+                
     def add_nessus_report_information(self, nessus_file_path):
         logging.info("Loading in memory the vulnerability database")
         vulnerability_database = load_vulnerability_database()
@@ -374,7 +441,7 @@ class Topology:
         results = root.findall("report")
         results2 = results[0].findall("results")
 
-         # For all hosts
+        # For all hosts
         for report_host in results2[0].findall("result"):
             assert isinstance(report_host, Element)
             host_name_or_ip = report_host.findall('host')[0].text
@@ -429,9 +496,20 @@ class Topology:
             
         # For all hosts
         for report_host in report["hosts"]:
+<<<<<<< HEAD
             host_name = report_host["name"]
             logging.info("Found host in generic report '" + host_name + "'")
             host = self.get_host_by_name(host_name)
+=======
+            if not report_host["firstIP"]:
+                host_name_or_ip = report_host["name"]
+                logging.info("Found host in generic report '" + host_name_or_ip + "'")
+                host = self.get_host_by_name(host_name_or_ip)
+            else:
+                host_name_or_ip = report_host["firstIP"]
+                logging.info("Found host in generic report '" + host_name_or_ip + "'")
+                host = self.get_host_by_ip(host_name_or_ip)
+>>>>>>> ndn
             if not host:
                 logging.warning(
                     "Host '" + host_name + "' was not found in the topology. Added it as unknown host.")
@@ -671,7 +749,10 @@ class Topology:
 
         for host in self.hosts:
             element.append(host.to_fiware_topology_xml_element())
-
+        
+        for ndn_link in self.ndn_links:
+            element.append(ndn_link.to_fiware_topology_xml_element())
+            
         element.append(self.flow_matrix.to_fiware_topology_xml_element())
 
         return element
@@ -789,6 +870,7 @@ class Host:
         self._name = name
         self._services = []
         self._interfaces = []
+        self._faces = [] 
         self._controllers = []
         self._security_requirement = 0
         self._routing_table = RoutingTable(self)
@@ -816,6 +898,10 @@ class Host:
     @property
     def interfaces(self):
         return self._interfaces
+    
+    @property
+    def faces(self):
+        return self._faces
         
     @property
     def controllers(self):
@@ -837,6 +923,10 @@ class Host:
         interface = Interface(interface_name, interface_ip, self)
         self._interfaces.append(interface)
         
+    def add_face(self, face_local):
+        face = Face(self, face_local)
+        self._faces.append(face)
+                
     def add_controller(self, controller_name):
         self._controllers.append(controller_name)
         
@@ -850,7 +940,7 @@ class Host:
             if interface.ip == interface_ip:
                 return interface
         return None
-
+         
     @property
     def vulnerabilities(self):
         vulnerabilities = {}
@@ -876,7 +966,7 @@ class Host:
             if interface.vlan not in result:
                 result.append(interface.vlan)
         return result
-
+    
     def to_fiware_topology_xml_element(self):
         element = ET.Element('machine')
         machine_name = ET.SubElement(element, 'name')
@@ -902,7 +992,12 @@ class Host:
 
         for interface in self.interfaces:
             interfaces_element.append(interface.to_fiware_topology_xml_element())
-
+        
+        faces_element = ET.SubElement(element, 'faces')
+        
+        for face in self.faces:
+            faces_element.append(face.to_fiware_topology_xml_element())
+        
         services_element = ET.SubElement(element, 'services')
         for service in self.services:
             services_element.append(service.to_fiware_topology_xml_element())
@@ -969,6 +1064,64 @@ class Interface:
 
         return element
 
+class Face:
+    def __init__(self, host_name, face_name):
+        self._host_name = host_name
+        self._face_name = face_name
+        
+    @property
+    def host_name(self):
+        return self._host_name
+    
+    @property
+    def face_name(self):
+        return self._face_name
+        
+    def to_fiware_topology_xml_element(self):
+        element = ET.Element('face')
+        face_n = ET.SubElement(element, 'face_name')
+        face_n.text = self.face_name
+        return element
+                
+class NdnLink:
+    def __init__(self, host_local, face_local, host_distant, face_distant):
+        self._host_local = host_local
+        self._face_local = face_local
+        self._host_distant = host_distant
+        self._face_distant = face_distant
+          
+    @property
+    def host_local(self):
+        return self._host_local
+      
+    @property
+    def face_local(self):
+        return self._face_local
+  
+    @property
+    def host_distant(self):
+        return self._host_distant
+      
+    @property
+    def face_distant(self):
+        return self._face_distant
+      
+    def to_fiware_topology_xml_element(self):
+        element = ET.Element('ndn_link')
+        
+        host_local_name = ET.SubElement(element, 'host_local')
+        host_local_name.text = str(self.host_local.name)
+        
+        face_local_name = ET.SubElement(element, 'face_local')
+        face_local_name.text = self.face_local
+        
+        host_distant_name = ET.SubElement(element, 'host_distant')
+        host_distant_name.text = str(self.host_distant.name)
+        
+        face_distant_name = ET.SubElement(element, 'face_distant')
+        face_distant_name.text = self.face_distant
+        
+        return element  
 
 class Service:
     def __init__(self, name, ip, port, protocol):
@@ -1286,8 +1439,7 @@ class PortRange:
             self.to_port = int(port_range_string)
         else:
             logging.warning(
-                "The folowing port range string is not valid and as not been parsed so it is beeing ignored. :" + port_range_string)
-
+                "The folowing port range string is not valid and as not been parsed so it is beeing ignored. :" + port_range_string)      
 
 def indent_xml(elem, level=0):
     i = "\n" + level * "  "

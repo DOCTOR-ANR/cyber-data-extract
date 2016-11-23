@@ -28,31 +28,43 @@ def main():
 
     #Build the Argument parser
     parser = argparse.ArgumentParser(description='Generates attack graph input files from topological files')
+    
     parser.add_argument('--hosts-interfaces-file', dest='hosts_interfaces_file', required=True,
                         help='The CSV file containing the hosts and the interfaces.')
+    
     parser.add_argument('--vlans-file', dest='vlans_file', required=True,
                         help='The CSV file containing the VLANS.')
+    
     parser.add_argument('--vulnerability-scan', dest='vulnerability_scan', required=False, nargs='+',
                         help='The Nessus scanner report file(s).')
+    
     parser.add_argument('--openvas-scan', dest='openvas_vulnerability_scan', required=False, nargs='+',
                         help='The OpenVAS scanner report file(s).')
+    
     parser.add_argument('--generic-scan', dest='generic_vulnerability_scan', required=False, nargs='+',
                         help='The generic scanner report file(s).')
+    
+    parser.add_argument('--NDN-topology-file', dest='ndn_topology_file', required=False, nargs='+',
+                        help='The CSV file containing the NDN topology')
+    
     parser.add_argument('--flow-matrix-file', dest='flow_matrix_file', required=False,
                         help='The CSV file containing the flow matrix')
+    
     parser.add_argument('--routing-file', dest='routing_file', required=False,
                         help='The CSV file containing the routing informations')
+    
     parser.add_argument('--vm-mapping-file', dest='vm_mapping_file', required=False, nargs='+',
                         help='The CSV file containing the VM placement on physical hosts')
+    
     parser.add_argument('--controllers-file', dest='controllers_file', required=False, nargs='+',
                         help='The CSV file containing the controllers and their obedient machines')
-
+        
     parser.add_argument('--mulval-output-file', dest='mulval_output_file', required=False,
                         help='The output path where the mulval input file will be stored.')
-
+    
     parser.add_argument('--to-fiware-xml-topology', dest='to_fiware_xml_topology', required=False,
                         help='The path where the XML topology file should be stored.')
-
+    
     parser.add_argument('--display-infos', action='store_true', dest='display_infos', required=False,
                         help='Display information and statistics about the topology.')
 
@@ -89,6 +101,10 @@ def main():
     if args.generic_vulnerability_scan:
         for generic_scan_file in args.generic_vulnerability_scan:
             topology.add_generic_report_information(generic_scan_file)
+            
+    if args.ndn_topology_file:
+        for ndn_topology_file in args.ndn_topology_file:
+            topology.load_ndn_topology_file(ndn_topology_file)
 
     if args.flow_matrix_file:
         topology.flow_matrix = FlowMatrix(topology, args.flow_matrix_file)
@@ -100,7 +116,7 @@ def main():
     if args.controllers_file:
         for control_file in args.controllers_file:
             topology.load_control_file(control_file)
-
+       
     if args.routing_file:
         topology.load_routing_file(args.routing_file)
     else:
