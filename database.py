@@ -23,7 +23,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
 import os
 
-database_default_path = "/opt/CyberCAPTOR/vulnerability-remediation-database.db"
+database_default_path = "/home/olivier/Work/Projets/CyberCAPTOR/vulnerability-remediation-database.db"
 engine = create_engine('sqlite:///' + str(os.getenv('VULNERABILITY_DATABASE_PATH', database_default_path)), convert_unicode=True, echo=False)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,

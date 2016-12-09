@@ -90,6 +90,14 @@ def main():
     topology = Topology()
     topology.load_from_topological_input_files(args.hosts_interfaces_file, args.vlans_file)
 
+    if args.ndn_topology_file:
+        for ndn_topology_file in args.ndn_topology_file:
+            topology.load_ndn_topology_file(ndn_topology_file)
+    
+    if args.generic_vulnerability_scan:
+        for generic_scan_file in args.generic_vulnerability_scan:
+            topology.add_generic_report_information(generic_scan_file)
+    
     if args.vulnerability_scan:
         for vulnerabity_scan_file in args.vulnerability_scan:
             topology.add_nessus_report_information(vulnerabity_scan_file)
@@ -98,14 +106,6 @@ def main():
         for openvas_scan_file in args.openvas_vulnerability_scan:
             topology.add_openvas_report_information(openvas_scan_file)
     
-    if args.generic_vulnerability_scan:
-        for generic_scan_file in args.generic_vulnerability_scan:
-            topology.add_generic_report_information(generic_scan_file)
-            
-    if args.ndn_topology_file:
-        for ndn_topology_file in args.ndn_topology_file:
-            topology.load_ndn_topology_file(ndn_topology_file)
-
     if args.flow_matrix_file:
         topology.flow_matrix = FlowMatrix(topology, args.flow_matrix_file)
         

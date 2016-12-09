@@ -329,7 +329,7 @@ class Topology:
         with open(ndn_topology_path) as csv_ndn_topology_file:
             csv_ndn_topology = csv.reader(csv_ndn_topology_file, delimiter=';')
             for csv_ndn_topology_line in csv_ndn_topology:
-                if (len(csv_ndn_topology_line) < 2) or csv_ndn_topology_line[0] == "source":
+                if (len(csv_ndn_topology_line) < 4) or csv_ndn_topology_line[0] == "source":
                     logging.warning("Line not parsed in NDN topology input file :\"" + ';'.join(csv_ndn_topology_line) + "\"")
                 else:
                     host_local = csv_ndn_topology_line[0]
@@ -498,8 +498,9 @@ class Topology:
         for report_host in report["hosts"]:
             host_name = report_host["name"]
             logging.info("Found host in generic report '" + host_name + "'")
+            
             host = self.get_host_by_name(host_name)
-
+            
             if not host:
                 logging.warning(
                     "Host '" + host_name + "' was not found in the topology. Added it as unknown host.")
@@ -524,17 +525,34 @@ class Topology:
                         else:
                             logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
                             service.set_global_name(host.name)
-
+ 
                     logging.debug(
                             "Vulnerable service : '" + svc_name + "' exposed on port " + str(
                                 port) + " using protocol " + protocol)
 
                     host.add_service(service)
+                    
+#                 for face in host.faces:
+
+                ndnservice = NdnService(svc_name, port, protocol)
+                if port == 0:
+                    if "global_name" in host_service:
+                        ndnservice.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
+                    else:
+                        logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
+                        ndnservice.set_global_name(host.name)
+ 
+                logging.debug(
+                        "Vulnerable service : '" + svc_name + "' exposed on port " + str(
+                            port) + " using protocol " + protocol)
+
+                host.add_ndnservice(ndnservice)
 
                 #Vulnerabilities for this service
                 for cve_item in host_service["vulnerabilities"]:
                     cve = cve_item["name"]
                     service.add_vulnerability(cve, vulnerability_database)
+                    ndnservice.add_vulnerability(cve, vulnerability_database)
                     number_of_added_vulnerabilities += 1
 
         logging.info(
@@ -859,6 +877,7 @@ class Host:
     def __init__(self, name, first_interface_name=None, first_interface_ip=None):
         self._name = name
         self._services = []
+        self._ndnservices = []
         self._interfaces = []
         self._faces = [] 
         self._controllers = []
@@ -873,9 +892,16 @@ class Host:
     @property
     def services(self):
         return self._services
+    
+    @property
+    def ndnservices(self):
+        return self._ndnservices
 
     def add_service(self, service):
         self._services.append(service)
+        
+    def add_ndnservice(self, ndnservice):
+        self._ndnservices.append(ndnservice)
 
     @property
     def routing_table(self):
@@ -991,7 +1017,12 @@ class Host:
         services_element = ET.SubElement(element, 'services')
         for service in self.services:
             services_element.append(service.to_fiware_topology_xml_element())
-
+        
+        for ndnservice in self.ndnservices:
+            services_element.append(ndnservice.to_fiware_topology_xml_element())
+        
+        
+        
         element.append(self.routing_table.to_fiware_topology_xml_element())
 
         return element
@@ -1066,11 +1097,11 @@ class Face:
     @property
     def face_name(self):
         return self._face_name
-        
+    
     def to_fiware_topology_xml_element(self):
         element = ET.Element('face')
         face_n = ET.SubElement(element, 'face_name')
-        face_n.text = self.face_name
+        face_n.text = str(self.face_name)
         return element
                 
 class NdnLink:
@@ -1114,10 +1145,10 @@ class NdnLink:
         return element  
 
 class NdnService:
-    def __init__(self, name, fce, port, protocol):
+    def __init__(self, name, port, protocol):
         self._name = name
         self._global_name = ""
-        self._fce = fce
+#         self._face = face
         self._port = port
         self._protocol = protocol
         self._vulnerabilities = []
@@ -1148,9 +1179,9 @@ class NdnService:
     def port(self):
         return self._port
 
-    @property
-    def fce(self):
-        return self._fce
+#     @property
+#     def face(self):
+#         return self._face
 
     @property
     def protocol(self):
@@ -1164,8 +1195,8 @@ class NdnService:
         element = ET.Element('service')
         service_name = ET.SubElement(element, 'name')
         service_name.text = self.name
-        service_fce = ET.SubElement(element, 'face')
-        service_fce.text = self.fce
+#         service_face = ET.SubElement(element, 'face')
+#         service_face.text = str(self.face)
         service_protocol = ET.SubElement(element, 'protocol')
         service_protocol.text = self.protocol
         service_port = ET.SubElement(element, 'port')
