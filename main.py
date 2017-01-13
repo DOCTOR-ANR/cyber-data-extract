@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--generic-scan', dest='generic_vulnerability_scan', required=False, nargs='+',
                         help='The generic scanner report file(s).')
     
-    parser.add_argument('--NDN-topology-file', dest='ndn_topology_file', required=False, nargs='+',
+    parser.add_argument('--ndn-topology-file', dest='ndn_topology_file', required=False, nargs='+',
                         help='The CSV file containing the NDN topology')
     
     parser.add_argument('--flow-matrix-file', dest='flow_matrix_file', required=False,
@@ -91,8 +91,8 @@ def main():
     topology.load_from_topological_input_files(args.hosts_interfaces_file, args.vlans_file)
 
     if args.ndn_topology_file:
-        for ndn_topology_file in args.ndn_topology_file:
-            topology.load_ndn_topology_file(ndn_topology_file)
+        for ndn_topology_file_i in args.ndn_topology_file:
+            topology.load_ndn_topology_file(ndn_topology_file_i)
     
     if args.generic_vulnerability_scan:
         for generic_scan_file in args.generic_vulnerability_scan:

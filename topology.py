@@ -203,10 +203,10 @@ class Topology:
 #         self.ndn_links.append(ndn_link) 
     
     def load_from_topological_input_files(self, hosts_interfaces_csv_file_path, hosts_vlans_csv_file_path=None):
-        logging.info("Loading the topological information...")
+        logging.info("Loading the topological information")
 
         if hosts_vlans_csv_file_path:
-            logging.info("[ ] Load VLANS from CSV file")
+            logging.info("[ ] Load VLANS from CSV file " + hosts_vlans_csv_file_path)
 
             with open(hosts_vlans_csv_file_path) as hosts_vlans_csv_file:
                 hosts_vlans_csv = csv.reader(hosts_vlans_csv_file, delimiter=';')
@@ -259,7 +259,7 @@ class Topology:
 
     def load_routing_file(self, csv_routing_file_path):
         if csv_routing_file_path:
-            logging.info("[ ] Load routing information from CSV file")
+            logging.info("[ ] Load routing information from CSV file " + csv_routing_file_path)
 
             with open(csv_routing_file_path) as csv_routing_file:
                 csv_routing = csv.reader(csv_routing_file, delimiter=';')
@@ -278,10 +278,11 @@ class Topology:
                             host.routing_table.add_line(destination, mask, gateway, interface)
                         else:
                             logging.warning("Did not find in the topology a host named : " + host_name)
+            logging.info("[X] Load routing information CSV file done")
 
     def load_vm_mpping_file(self, vm_map_file_path):
         if vm_map_file_path:
-            logging.info("[ ] Load VM placement from CSV file")
+            logging.info("[ ] Load VM placement from CSV file " + vm_map_file_path)
             
         with open(vm_map_file_path) as csv_map_file:
                 csv_map = csv.reader(csv_map_file, delimiter=';')
@@ -302,10 +303,11 @@ class Topology:
                             host.add_physical_machine(host_physical, process, user)
                         else:
                             logging.warning("Did not find in the topology a host named : " + host_name)
+                logging.info("[X] Load VM placement CSV file done")
     
     def load_control_file(self, control_file_path):
         if control_file_path:
-            logging.info("[ ] Load controllers / orchestrators domains from CSV file")
+            logging.info("[ ] Load controllers / orchestrators domains from CSV file " + control_file_path)
             
         with open(control_file_path) as csv_control_file:
                 csv_control = csv.reader(csv_control_file, delimiter=';')
@@ -321,10 +323,11 @@ class Topology:
                             host.add_controller(controller_name)
                         else:
                             logging.warning("Did not find in the topology a host named : " + host_name)
+                logging.info("[X] Load controllers / orchestrators domains CSV file done")
     
     def load_ndn_topology_file(self, ndn_topology_path):
         if ndn_topology_path:
-            logging.info(" [ ] Load NDN topology from the CSV file")
+            logging.info("[ ] Load NDN topology from the CSV file " + ndn_topology_path)
             
         with open(ndn_topology_path) as csv_ndn_topology_file:
             csv_ndn_topology = csv.reader(csv_ndn_topology_file, delimiter=';')
@@ -369,12 +372,14 @@ class Topology:
                         self.add_ndn_link(host_ndn_loc, face_local, host_ndn_dst, face_distant)
                     else:
                         logging.info("The NDN link between " + host_ndn_loc + " and " + host_ndn_dst + " is already in the topology")
+                        
+            logging.info("[X] Load NDN topology CSV file done")
                 
     def add_nessus_report_information(self, nessus_file_path):
         logging.info("Loading in memory the vulnerability database")
         vulnerability_database = load_vulnerability_database()
 
-        logging.info("Parsing the Nessus file : " + nessus_file_path)
+        logging.info("[ ] Parsing the Nessus file " + nessus_file_path)
         tree = parse(nessus_file_path)
         root = tree.getroot()
 
@@ -404,7 +409,7 @@ class Topology:
                 svc_name = report_item.attrib['svc_name'].lower()
                 protocol = report_item.attrib['protocol'].lower()
 
-                service = Service(svc_name, host_name_or_ip, port, protocol)
+                service = Service(svc_name, host_name_or_ip, port, protocol, 0)
                 if port == 0:
                     service.set_global_name(host.name)
 
@@ -425,12 +430,13 @@ class Topology:
             str(number_of_treated_host) + " hosts where found both in the topology and the vulnerability scan.")
         logging.info(
             str(number_of_added_vulnerabilities) + " vulnerabilities where added thanks to this vulnerability scan.")
+        logging.info("[X] Load Nessus file done")
 
     def add_openvas_report_information(self, nessus_file_path):
         logging.info("Loading in memory the vulnerability database")
         vulnerability_database = load_vulnerability_database()
 
-        logging.info("Parsing the OpenVAS file : " + nessus_file_path)
+        logging.info("[ ] Parsing the OpenVAS file " + nessus_file_path)
         tree = parse(nessus_file_path)
         root = tree.getroot()
 
@@ -461,7 +467,7 @@ class Topology:
             svc_name = report_host.findall("name")[0].text.lower()
             protocol = port_and_prot[1]
 
-            service = Service(svc_name, host_name_or_ip, port, protocol)
+            service = Service(svc_name, host_name_or_ip, port, protocol, 0)
             if port == 0:
                 service.set_global_name(host.name)
 
@@ -482,6 +488,7 @@ class Topology:
             str(number_of_treated_host) + " hosts where found both in the topology and the vulnerability scan.")
         logging.info(
             str(number_of_added_vulnerabilities) + " vulnerabilities where added thanks to this vulnerability scan.")
+        logging.info("[X] Load OpenVAS file done")
             
     def add_generic_report_information(self, report_file_path):
         logging.info("Loading in memory the vulnerability database")
@@ -490,7 +497,7 @@ class Topology:
         number_of_treated_host = 0
         number_of_added_vulnerabilities = 0
         
-        logging.info("Parsing the generic vulnerability report file : " + report_file_path)
+        logging.info("[ ] Parsing the generic vulnerability report file " + report_file_path)
         with open(report_file_path, "r") as f :
             report = json.loads(f.read())
             
@@ -510,58 +517,64 @@ class Topology:
 
             # Services for this host
             for host_service in report_host["services"]:
-                port = host_service["servicePort"]
+                if 'servicePort' in host_service:
+                    port = host_service["servicePort"]
+                else:
+                    port = 0
                 svc_name = host_service["serviceName"]
                 protocol = host_service["serviceProto"].lower()
+                svc_type = 0
+                if 'isIGWSoftware' in host_service:
+                    if host_service['isIGWSoftware'] == True:
+                        svc_type = 1
+                
                 
                 # Add service to all interfaces of the host
-                for interface in host.interfaces:
-                    my_ip = interface.ip.lower()
-
-                    service = Service(svc_name, my_ip, port, protocol)
-                    if port == 0:
-                        if "global_name" in host_service:
-                            service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
-                        else:
-                            logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
-                            service.set_global_name(host.name)
- 
+                if protocol == "ndn":
+                    ndnservice = NdnService(svc_name, svc_type, protocol)
+     
                     logging.debug(
                             "Vulnerable service : '" + svc_name + "' exposed on port " + str(
                                 port) + " using protocol " + protocol)
 
-                    host.add_service(service)
-                    
-#                 for face in host.faces:
+                    host.add_ndnservice(ndnservice)
+                
+                else:    
+                    for interface in host.interfaces:
+                        my_ip = interface.ip.lower()
 
-                ndnservice = NdnService(svc_name, port, protocol)
-                if port == 0:
-                    if "global_name" in host_service:
-                        ndnservice.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
-                    else:
-                        logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
-                        ndnservice.set_global_name(host.name)
- 
-                logging.debug(
-                        "Vulnerable service : '" + svc_name + "' exposed on port " + str(
-                            port) + " using protocol " + protocol)
+                        service = Service(svc_name, my_ip, port, protocol, svc_type)
+                        if port == 0:
+                            if "global_name" in host_service:
+                                service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
+                            else:
+                                logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
+                                service.set_global_name(host.name)
+     
+                        logging.debug(
+                                "Vulnerable service : '" + svc_name + "' exposed on port " + str(
+                                    port) + " using protocol " + protocol)
 
-                host.add_ndnservice(ndnservice)
+                        host.add_service(service)
 
                 #Vulnerabilities for this service
                 for cve_item in host_service["vulnerabilities"]:
                     cve = cve_item["name"]
-                    service.add_vulnerability(cve, vulnerability_database)
-                    ndnservice.add_vulnerability(cve, vulnerability_database)
+                    if protocol == "ndn":
+                        ndnservice.add_vulnerability(cve, vulnerability_database)
+                    else:
+                        service.add_vulnerability(cve, vulnerability_database)
+                    
                     number_of_added_vulnerabilities += 1
 
         logging.info(
             str(number_of_treated_host) + " hosts where found both in the topology and the vulnerability scan.")
         logging.info(
             str(number_of_added_vulnerabilities) + " vulnerabilities where added thanks to this vulnerability scan.")
+        logging.info("[X] Load Generic JSON vulnerabilities file done")
 
     def to_mulval_input_file(self, mulval_input_file_path):
-        logging.info("Export the topology as mulval input file.")
+        logging.info("[ ] Exporting the topology as mulval input file " + mulval_input_file_path)
         # TODO (priority low): don't add to the file a line that was already added (suppress useless duplicates)
         mulval_input_file = open(mulval_input_file_path, "w")
 
@@ -578,6 +591,10 @@ class Topology:
             hostname = host.name
             mulval_input_file.write("attackerLocated('" + hostname + "').\n")
             mulval_input_file.write("attackGoal(execCode('" + hostname + "',_)).\n")
+            
+            # Assume a host is a NDN router if it has at least 1 NDN face
+            if len(host.faces) > 0:
+                mulval_input_file.write("isNDNRouter('" + hostname + "').\n")
             
             # if it's a VM, add the host mapping
             if host.physical_host != "" and host.physical_user != "" and host.physical_process != "":
@@ -596,43 +613,49 @@ class Topology:
                     logging.info(hostname + " (" + interface.ip + ") is not in any VLAN.")
 
             mulval_input_file.write("hostAllowAccessToAllIP('" + hostname + "').\n")
-
+            
+            # Add NDN faces
+            for face in host.faces:
+                mulval_input_file.write("hasNDNface('" + hostname + "','" + hostname + '_' + face.face_name + "').\n")
+            
+            # Add IP services
             for service in host.services:
                 assert isinstance(service, Service)
                 svc_name = service.name
                 global_name = service.global_name
                 port = service.port
+                svc_type = service.svc_type
                 protocol = service.protocol
+                service_legit = False
 
                 mulval_input_file.write("/* " + svc_name + " (" + global_name + ") */\n")
+                if svc_type == 1:
+                    mulval_input_file.write("isIGWSoftware('" + svc_name + "').\n")
                 
-                if port == 0 and global_name != "":
+                if port == 0 and global_name != "" and protocol != "ndn":
+                    service_legit = True
                     svc_user = "user"
                     mulval_input_file.write(
                         "localServiceInfo('" + global_name + "', '" + hostname + "', '" + svc_name + "', '" + svc_user + "').\n")
                         
-                    for vulnerability in service.vulnerabilities:
-                        assert isinstance(vulnerability, Vulnerability)
-                        if vulnerability.cvss.access_vector == "NETWORK":
-                            mulval_input_file.write(
-                                "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', remoteExploit, privEscalation).\n")
-
-                        elif vulnerability.cvss.access_vector == "LOCAL":
-                            mulval_input_file.write(
-                                "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', localExploit, privEscalation).\n")
-                            #TODO (priority low): only add this line once for all hosts.
-
-                if port >= 0 and protocol in ["tcp", "udp", "icmp"]:
+                elif port >= 0 and protocol in ["tcp", "udp", "icmp"]:
+                    service_legit = True
                     # svc_user = svc_name + "_user"
                     svc_user = "user"
                     mulval_input_file.write(
                         "networkServiceInfo('" + service.ip + "', '" + svc_name + "', '" + protocol.upper() + "', " + str(
                             port) + ", '" + svc_user + "').\n")
-
+                            
+                elif protocol == "ndn":
+                    service_legit = True
+                    mulval_input_file.write(
+                        "ndnServiceInfo('" + hostname + "','" + svc_name + "','" + svc_user + "').\n")
+                    if port == 1:
+                        mulval_input_file.write(
+                        "isIGWSoftware('" + svc_name + "').\n")
+                    
+                # Add service vulnerabilities
+                if service_legit == True:
                     for vulnerability in service.vulnerabilities:
                         assert isinstance(vulnerability, Vulnerability)
                         if vulnerability.cvss.access_vector == "NETWORK":
@@ -640,14 +663,60 @@ class Topology:
                                 "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
                             mulval_input_file.write(
                                 "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', remoteExploit, privEscalation).\n")
-
                         elif vulnerability.cvss.access_vector == "LOCAL":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
                             mulval_input_file.write(
                                 "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', localExploit, privEscalation).\n")
+                        elif vulnerability.cvss.access_vector == "SIGNATURE":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', signatureExploit, cachePoisonned).\n")
                             #TODO (priority low): only add this line once for all hosts.
 
+            # add NDN services
+            for service in host.ndnservices:
+                assert isinstance(service, NdnService)
+                svc_name = service.name
+                global_name = service.global_name
+                svc_type = service.svc_type
+                protocol = service.protocol
+                service_legit = False
+
+                mulval_input_file.write("/* " + svc_name + " (" + global_name + ") */\n")
+                if svc_type == 1:
+                    mulval_input_file.write("isIGWSoftware('" + svc_name + "').\n")
+                
+                if protocol == "ndn":
+                    service_legit = True
+                    svc_user = "user"
+                    mulval_input_file.write(
+                        "ndnServiceInfo('" + hostname + "', '" + svc_name + "', '" + svc_user + "').\n")
+                        
+                # Add service vulnerabilities
+                if service_legit == True:
+                    for vulnerability in service.vulnerabilities:
+                        assert isinstance(vulnerability, Vulnerability)
+                        if vulnerability.cvss.access_vector == "NETWORK":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', remoteExploit, privEscalation).\n")
+                        elif vulnerability.cvss.access_vector == "LOCAL":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', localExploit, privEscalation).\n")
+                        elif vulnerability.cvss.access_vector == "SIGNATURE":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', signatureExploit, cachePoisonned).\n")
+            
+        # Add IP flow matrix
+        mulval_input_file.write("\n\n/****\n *** IP flow matrix\n ***/\n")
+        
         if self.flow_matrix and len(self.flow_matrix.lines) > 0:
             for flow_matrix_line in self.flow_matrix.lines:
 
@@ -706,8 +775,14 @@ class Topology:
                 for vlan2 in self.vlans:
                     if vlan1 is not vlan2:
                         mulval_input_file.write("vlanToVlan('" + vlan1.name + "','" + vlan2.name + "',_,_).\n")
-        mulval_input_file.write("defaultLocalFilteringBehavior(_,allow).\n")  # local access is allowed on
-        # each IP address (no interfaces have local filtering rules)
+        mulval_input_file.write("defaultLocalFilteringBehavior(_,allow).\n")  # local access is allowed on each IP address (no interfaces have local filtering rules)
+        
+        # add NDN links
+        mulval_input_file.write("\n\n/****\n *** NDN links\n ***/\n")
+        for ndn_link in self.ndn_links:
+            mulval_input_file.write("faceIsLinked('" + ndn_link.host_local.name + "_" + ndn_link.face_local + "','" + ndn_link.host_distant.name + "_" + ndn_link.face_distant + "').\n")
+            
+        logging.info("[X] MulVAL input file generation done")
 
 
     def print_details(self):
@@ -748,18 +823,22 @@ class Topology:
                 print('\t"' + interface.name + '" : ' + interface.ip)
 
     def to_fiware_topology_file(self, topology_xml_file):
+        logging.info("[ ] Generating XML topology file " + topology_xml_file)
         xml_root = self.to_fiware_topology_xml_element()
         indent_xml(xml_root)
         ET.ElementTree(xml_root).write(topology_xml_file)
+        logging.info("[X] XML topology file generation done")
 
     def to_fiware_topology_xml_element(self):
         element = ET.Element('topology')
 
         for host in self.hosts:
             element.append(host.to_fiware_topology_xml_element())
-        
+            
+        ndn_flows = ET.SubElement(element, 'ndn-links')
         for ndn_link in self.ndn_links:
-            element.append(ndn_link.to_fiware_topology_xml_element())
+            ndn_flows.append(ndn_link.to_fiware_topology_xml_element())
+        element.append(ndn_flows)
             
         element.append(self.flow_matrix.to_fiware_topology_xml_element())
 
@@ -1009,10 +1088,10 @@ class Host:
         for interface in self.interfaces:
             interfaces_element.append(interface.to_fiware_topology_xml_element())
         
-        faces_element = ET.SubElement(element, 'faces')
-        
-        for face in self.faces:
-            faces_element.append(face.to_fiware_topology_xml_element())
+        if len(self.faces) > 0:
+            faces_element = ET.SubElement(element, 'faces')
+            for face in self.faces:
+                faces_element.append(face.to_fiware_topology_xml_element())
         
         services_element = ET.SubElement(element, 'services')
         for service in self.services:
@@ -1100,7 +1179,7 @@ class Face:
     
     def to_fiware_topology_xml_element(self):
         element = ET.Element('face')
-        face_n = ET.SubElement(element, 'face_name')
+        face_n = ET.SubElement(element, 'name')
         face_n.text = str(self.face_name)
         return element
                 
@@ -1128,28 +1207,29 @@ class NdnLink:
         return self._face_distant
       
     def to_fiware_topology_xml_element(self):
-        element = ET.Element('ndn_link')
+        element = ET.Element('ndn-link')
         
-        host_local_name = ET.SubElement(element, 'host_local')
+        host_local_name = ET.SubElement(element, 'host-src')
         host_local_name.text = str(self.host_local.name)
         
-        face_local_name = ET.SubElement(element, 'face_local')
+        face_local_name = ET.SubElement(element, 'face-src')
         face_local_name.text = self.face_local
         
-        host_distant_name = ET.SubElement(element, 'host_distant')
+        host_distant_name = ET.SubElement(element, 'host-dst')
         host_distant_name.text = str(self.host_distant.name)
         
-        face_distant_name = ET.SubElement(element, 'face_distant')
+        face_distant_name = ET.SubElement(element, 'face-dst')
         face_distant_name.text = self.face_distant
         
         return element  
 
 class NdnService:
-    def __init__(self, name, port, protocol):
+    def __init__(self, name, svc_type, protocol):
         self._name = name
         self._global_name = ""
 #         self._face = face
-        self._port = port
+        self._svc_type = svc_type
+        self._port = 0
         self._protocol = protocol
         self._vulnerabilities = []
 
@@ -1175,6 +1255,10 @@ class NdnService:
     def set_global_name(self, n):
         self._global_name = n
     
+    @property
+    def svc_type(self):
+        return self._svc_type
+        
     @property
     def port(self):
         return self._port
@@ -1235,13 +1319,14 @@ class NdnService:
 
 
 class Service:
-    def __init__(self, name, ip, port, protocol):
+    def __init__(self, name, ip, port, protocol, svc_type):
         self._name = name
         self._global_name = ""
         self._ip = ip
         self._port = port
         self._protocol = protocol
         self._vulnerabilities = []
+        self._svc_type = svc_type
 
     @property
     def name(self):
@@ -1268,6 +1353,10 @@ class Service:
     @property
     def port(self):
         return self._port
+        
+    @property
+    def svc_type(self):
+        return self._svc_type
 
     @property
     def ip(self):
