@@ -616,7 +616,7 @@ class Topology:
             
             # Add NDN faces
             for face in host.faces:
-                mulval_input_file.write("hasNDNface('" + hostname + "','" + hostname + '_' + face.face_name + "').\n")
+                mulval_input_file.write("hasNDNFace('" + hostname + "','" + hostname + '_' + face.face_name + "').\n")
             
             # Add IP services
             for service in host.services:
