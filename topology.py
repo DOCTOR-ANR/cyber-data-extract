@@ -411,7 +411,7 @@ class Topology:
 
                 service = Service(svc_name, host_name_or_ip, port, protocol, 0)
                 if port == 0:
-                    service.set_global_name(host.name)
+                    service.set_global_name(host.name + '_' + svc_name)
 
                 logging.debug(
                     "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -469,7 +469,7 @@ class Topology:
 
             service = Service(svc_name, host_name_or_ip, port, protocol, 0)
             if port == 0:
-                service.set_global_name(host.name)
+                service.set_global_name(host.name + '_' + svc_name)
 
             logging.debug(
                     "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -549,7 +549,7 @@ class Topology:
                                 service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
                             else:
                                 logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
-                                service.set_global_name(host.name)
+                                service.set_global_name(host.name + '_' + svc_name)
      
                         logging.debug(
                                 "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -618,7 +618,7 @@ class Topology:
             for face in host.faces:
                 mulval_input_file.write("hasNDNFace('" + hostname + "','" + hostname + '_' + face.face_name + "').\n")
             
-            # Add IP services
+            # Add services
             for service in host.services:
                 assert isinstance(service, Service)
                 svc_name = service.name
@@ -632,7 +632,7 @@ class Topology:
                 if svc_type == 1:
                     mulval_input_file.write("isIGWSoftware('" + svc_name + "').\n")
                 
-                if port == 0 and global_name != "" and protocol != "ndn":
+                if port == 0 and protocol != "ndn":
                     service_legit = True
                     svc_user = "user"
                     mulval_input_file.write(
@@ -650,9 +650,6 @@ class Topology:
                     service_legit = True
                     mulval_input_file.write(
                         "ndnServiceInfo('" + hostname + "','" + svc_name + "','" + svc_user + "').\n")
-                    if port == 1:
-                        mulval_input_file.write(
-                        "isIGWSoftware('" + svc_name + "').\n")
                     
                 # Add service vulnerabilities
                 if service_legit == True:
@@ -662,17 +659,17 @@ class Topology:
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
                             mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', remoteExploit, privEscalation).\n")
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "LOCAL":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
                             mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', localExploit, privEscalation).\n")
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "SIGNATURE":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
                             mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', signatureExploit, cachePoisonned).\n")
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                             #TODO (priority low): only add this line once for all hosts.
 
             # add NDN services
@@ -702,17 +699,17 @@ class Topology:
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
                             mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', remoteExploit, privEscalation).\n")
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "LOCAL":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
                             mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', localExploit, privEscalation).\n")
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "SIGNATURE":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
                             mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "', signatureExploit, cachePoisonned).\n")
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
             
         # Add IP flow matrix
         mulval_input_file.write("\n\n/****\n *** IP flow matrix\n ***/\n")
@@ -838,7 +835,6 @@ class Topology:
         ndn_flows = ET.SubElement(element, 'ndn-links')
         for ndn_link in self.ndn_links:
             ndn_flows.append(ndn_link.to_fiware_topology_xml_element())
-        element.append(ndn_flows)
             
         element.append(self.flow_matrix.to_fiware_topology_xml_element())
 
@@ -1310,7 +1306,7 @@ class NdnService:
                 if access_vector == "LOCAL" or access_vector == "NETWORK":   
                     vulnerability_goal.text = "privEscalation"
                 elif access_vector == "SIGNATURE":
-                    vulnerability_goal.text = "cachedPoisonned"
+                    vulnerability_goal.text = "cachePoisonned"
                 vulnerability_cvss = ET.SubElement(vulnerability_element, 'cvss')
                 vulnerability_cvss.text = str(vulnerability.cvss.score)
 
