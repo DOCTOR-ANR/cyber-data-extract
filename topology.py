@@ -573,6 +573,81 @@ class Topology:
             str(number_of_added_vulnerabilities) + " vulnerabilities where added thanks to this vulnerability scan.")
         logging.info("[X] Load Generic JSON vulnerabilities file done")
 
+    def load_from_gci_xml_file(self, gci_xml_file):
+        tree = ET.parse(gci_xml_file)
+        root = tree.getroot()
+        
+        # debug
+        for c in root:
+            print c.tag
+        
+        my_vlans = {}  # contains already placed vlans. 1 vlan = name : [addr, mask, nb_of_already_placed_machines]
+        my_orchestrators = {} # contains orchestrator for each VNF manager : key = VNF manager, value = orchestrator
+        vlans_index = 0
+        vlans_range = "10.99.0.0"
+        for c in root:
+            if c.tag == "NFVOrchestrator":
+                # add hosts and their interfaces and vlans
+                for interface in c:
+                    if interface.tag == "VNFID-VLID":
+                        vlan_interfaces = interface.text.lower().strip(' ').split(';')
+                        host_name = clean_host_name(vlan_interfaces[0])
+                        vlan_name = vlan_interfaces[1]
+                        if_name = host_name + '_' + vlan_name
+                        # add new vlan
+                        if not vlan_name in my_vlans:
+                            vlans_index = vlans_index + 1
+                            vlan_address_split = vlans_range.split('.')
+                            vlan_address_split[2] = str(vlans_index)
+                            vlan_address = '.'.join(vlan_address_split)
+                            vlan_gateway = None
+                            vlan_mask = str(24)
+                            self.add_vlan(vlan_name, vlan_address, vlan_mask, vlan_gateway)
+                            my_vlans[vlan_name] = [vlan_address, vlan_mask, 0]
+                            
+                        # add interface to vlan
+                        local_vlan = my_vlans[vlan_name]
+                        local_vlan[2] = local_vlan[2] + 1
+                        addr_split = local_vlan[0].split('.')
+                        addr_split[3] = str(local_vlan[2])
+                        ip_address = '.'.join(addr_split)
+                        connectedToWAN = False
+                        security_requirement = 0.
+                        self.add_host_or_update_existing(host_name, if_name, ip_address, connectedToWAN, security_requirement)
+                        
+            if c.tag == "VIM":
+                # add mapping from hosts to VMs
+                for vnf in c:
+                    if vnf.tag == "VNF":
+                        for element in vnf:
+                            if element.tag == "VNFHostId":
+                                host_physical = element.text.lower().strip(' ')
+                            if element.tag == "ID":
+                                host_name = element.text.lower().strip(' ')
+                        if host_name and host_physical:
+                            user = "root"
+                            process = "kvm" # TODO : get this info from the XML file
+                               
+                            host = self.get_host_by_name(host_name)
+                            if host:
+                                host.add_physical_machine(host_physical, process, user)
+                            host_p = self.get_host_by_name(host_physical)
+                            if not host_p:
+                                self.add_host(host_physical)
+                                
+           # if c.tag.rfind("-VNF") == len(c.tag)-4:
+                # add mapping for controllers / orchestrators
+                
+                                
+                    
+
+        for host in self.hosts:
+            host.routing_table.add_default_gateway()
+        
+        
+        logging.info("[X] Load topology from XML GCI file done") 
+    
+    
     def to_mulval_input_file(self, mulval_input_file_path):
         logging.info("[ ] Exporting the topology as mulval input file " + mulval_input_file_path)
         # TODO (priority low): don't add to the file a line that was already added (suppress useless duplicates)
@@ -670,6 +745,16 @@ class Topology:
                                 "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
                             mulval_input_file.write(
                                 "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                        elif vulnerability.cvss.access_vector == "FIB":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', fibExploit, corruptFib).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                        elif vulnerability.cvss.access_vector == "PIT":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', pitExploit, cachePoisonned).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                             #TODO (priority low): only add this line once for all hosts.
 
             # add NDN services
@@ -708,6 +793,16 @@ class Topology:
                         elif vulnerability.cvss.access_vector == "SIGNATURE":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                        elif vulnerability.cvss.access_vector == "FIB":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', fibExploit, corruptFib).\n")
+                            mulval_input_file.write(
+                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                        elif vulnerability.cvss.access_vector == "PIT":
+                            mulval_input_file.write(
+                                "vulProperty('" + vulnerability.cve + "', pitExploit, cachePoisonned).\n")
                             mulval_input_file.write(
                                 "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
             
@@ -1299,14 +1394,22 @@ class NdnService:
                 elif access_vector == "SIGNATURE":
                     vulnerability_type = ET.SubElement(vulnerability_element, 'type')
                     vulnerability_type.text = "signatureExploit"
+                elif access_vector == "FIB":
+                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                    vulnerability_type.text = "fibExploit"
+                elif access_vector == "PIT":
+                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                    vulnerability_type.text = "pitExploit"
                     
                 vulnerability_cve = ET.SubElement(vulnerability_element, 'cve')
                 vulnerability_cve.text = str(vulnerability.cve)
                 vulnerability_goal = ET.SubElement(vulnerability_element, 'goal')
                 if access_vector == "LOCAL" or access_vector == "NETWORK":   
                     vulnerability_goal.text = "privEscalation"
-                elif access_vector == "SIGNATURE":
+                elif access_vector == "SIGNATURE" or access_vector == "PIT":
                     vulnerability_goal.text = "cachePoisonned"
+                elif access_vector == "FIB":
+                    vulnerability_goal.text = "corruptFib"
                 vulnerability_cvss = ET.SubElement(vulnerability_element, 'cvss')
                 vulnerability_cvss.text = str(vulnerability.cvss.score)
 

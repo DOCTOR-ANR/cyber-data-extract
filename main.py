@@ -29,10 +29,10 @@ def main():
     #Build the Argument parser
     parser = argparse.ArgumentParser(description='Generates attack graph input files from topological files')
     
-    parser.add_argument('--hosts-interfaces-file', dest='hosts_interfaces_file', required=True,
+    parser.add_argument('--hosts-interfaces-file', dest='hosts_interfaces_file', required=False,
                         help='The CSV file containing the hosts and the interfaces.')
     
-    parser.add_argument('--vlans-file', dest='vlans_file', required=True,
+    parser.add_argument('--vlans-file', dest='vlans_file', required=False,
                         help='The CSV file containing the VLANS.')
     
     parser.add_argument('--vulnerability-scan', dest='vulnerability_scan', required=False, nargs='+',
@@ -58,6 +58,9 @@ def main():
     
     parser.add_argument('--controllers-file', dest='controllers_file', required=False, nargs='+',
                         help='The CSV file containing the controllers and their obedient machines')
+                       
+    parser.add_argument('--gci-file', dest='gci_xml_file', required=False,
+                        help='The XML file containing the network topology from the Orange GCI interface')
         
     parser.add_argument('--mulval-output-file', dest='mulval_output_file', required=False,
                         help='The output path where the mulval input file will be stored.')
@@ -88,7 +91,9 @@ def main():
     init_db()
 
     topology = Topology()
-    topology.load_from_topological_input_files(args.hosts_interfaces_file, args.vlans_file)
+    
+    if args.hosts_interfaces_file and args.vlans_file:
+        topology.load_from_topological_input_files(args.hosts_interfaces_file, args.vlans_file)
 
     if args.ndn_topology_file:
         for ndn_topology_file_i in args.ndn_topology_file:
@@ -122,6 +127,9 @@ def main():
     else:
         logging.info("No flow matrix file has been provided.")
         topology.flow_matrix = FlowMatrix(topology)
+        
+    if args.gci_xml_file:
+        topology.load_from_gci_xml_file(args.gci_xml_file)
 
     if args.display_infos:
         topology.print_details()
