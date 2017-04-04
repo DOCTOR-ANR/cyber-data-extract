@@ -574,17 +574,21 @@ class Topology:
         logging.info("[X] Load Generic JSON vulnerabilities file done")
 
     def load_from_gci_xml_file(self, gci_xml_file):
+        logging.info("Loading topology from XML GCI file")
         tree = ET.parse(gci_xml_file)
         root = tree.getroot()
         
-        # debug
-        for c in root:
-            print c.tag
+        logging.info("Loading in memory the vulnerability database")
+        vulnerability_database = load_vulnerability_database()
         
         my_vlans = {}  # contains already placed vlans. 1 vlan = name : [addr, mask, nb_of_already_placed_machines]
         my_orchestrators = {} # contains orchestrator for each VNF manager : key = VNF manager, value = orchestrator
         vlans_index = 0
         vlans_range = "10.99.0.0"
+        orchestrators_managers = [] # contains pairs of [orchestrator, manager]
+        managers_vnfs = [] # contains pairs of [manager, vnf]
+        number_of_added_vulnerabilities = 0
+        
         for c in root:
             if c.tag == "NFVOrchestrator":
                 # add hosts and their interfaces and vlans
@@ -626,7 +630,7 @@ class Topology:
                                 host_name = element.text.lower().strip(' ')
                         if host_name and host_physical:
                             user = "root"
-                            process = "kvm" # TODO : get this info from the XML file
+                            process = "kvm" # TODO : get this info from the XML file ?
                                
                             host = self.get_host_by_name(host_name)
                             if host:
@@ -635,11 +639,113 @@ class Topology:
                             if not host_p:
                                 self.add_host(host_physical)
                                 
-           # if c.tag.rfind("-VNF") == len(c.tag)-4:
-                # add mapping for controllers / orchestrators
-                
-                                
+            
+            if c.tag == "VNFManager":
+                # add mapping between NFV Orchestrators and VNF Managers
+                vnfManagerID = ""
+                vnfOrchestratorID = ""
+                for element in c:
+                    if element.tag == "ID":
+                        vnfManagerID = element.text.lower().strip(' ')
+                    if element.tag == "NFVOrchestratorID":
+                        vnfOrchestratorID = element.text.lower().strip(' ')
+                if vnfManagerID != "" and vnfOrchestratorID != "":
+                    orchestrators_managers.append([vnfOrchestratorID, vnfManagerID])
+            
+            if c.tag.rfind("-VNF") == len(c.tag)-4:
+                # add mapping between VNF Managers and VNFs
+                vnfID = ""
+                vnfManagerID = ""
+                for element in c:
+                    if element.tag == "ID":
+                        vnfID = element.text.lower().strip(' ')
+                    if element.tag == "VNFManagerID":
+                        vnfManagerID = element.text.lower().strip(' ')
+                if vnfID != "" and vnfManagerID != "":
+                    managers_vnfs.append([vnfManagerID, vnfID])
                     
+            if c.tag == "vul":
+                # add a vulnerability
+                vul_id = ""
+                vnf_id = ""
+                for element in c:
+                    if element.tag == "ID":
+                        vul_id = element.text.lower().strip(' ')
+                    if element.tag == "ID-VNF":
+                        vnf_id = element.text.lower().strip(' ')
+                    if element.tag == "Service":
+                        # vulnerable service
+                        service_dict = {}
+                        for service_element in element:
+                            service_dict[service_element.tag] = service_element.text.lower().strip(' ')
+                if vul_id != "" and vnf_id != "" and service_dict != "":  
+                        # get service info
+                        if 'Port' in service_dict:
+                            port = int(service_dict['Port'])
+                        else:
+                            port = 0
+                        svc_name = service_dict['ID']
+                        protocol = service_dict['Protocol']
+                        svc_type = 0
+                        if 'isIGWSoftware' in service_dict:
+                            if service_dict['isIGWSoftware'] == True:
+                                svc_type = 1
+                        host = self.get_host_by_name(vnf_id)
+                        if host == None:
+                            logging.error("Inexistant host of VNF (" + vnf_id + ") referenced in <vul> block")
+                        else:
+                            # Add service to all interfaces of the host
+                            if protocol == "ndn":
+                                ndnservice = NdnService(svc_name, svc_type, protocol)
+                 
+                                logging.debug(
+                                        "Vulnerable service : '" + svc_name + "' exposed on port " + str(
+                                            port) + " using protocol " + protocol)
+                                
+                                # Add the initial vulnerabily
+                                if 'Descriptor' in service_dict:
+                                    cve = service_dict['Descriptor'].upper()
+                                    ndnservice.add_vulnerability(cve, vulnerability_database)
+                                    number_of_added_vulnerabilities += 1
+                                host.add_ndnservice(ndnservice)
+                            
+                            else:    
+                                for interface in host.interfaces:
+                                    my_ip = interface.ip.lower()
+
+                                    service = Service(svc_name, my_ip, port, protocol, svc_type)
+                                    if port == 0:
+                                        if "global_name" in host_service:
+                                            service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
+                                        else:
+                                            logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
+                                            service.set_global_name(host.name + '_' + svc_name)
+                 
+                                    logging.debug(
+                                            "Vulnerable service : '" + svc_name + "' exposed on port " + str(
+                                                port) + " using protocol " + protocol)
+
+                                    # Add the initial vulnerabily
+                                    if 'Descriptor' in service_dict:
+                                        cve = service_dict['Descriptor'].upper()
+                                        service.add_vulnerability(cve, vulnerability_database)
+                                        number_of_added_vulnerabilities += 1
+                                    host.add_service(service)
+                                 
+        # build the direct mapping NFV orchrstrators -> VNFs
+        for o_m in orchestrators_managers:
+            orchestrator = o_m[0]
+            manager = o_m[1]
+            for m_v in managers_vnfs:
+                manager1 = m_v[0]
+                vnf = m_v[1]
+                if  manager == manager1:
+                    vnf_machine = self.get_host_by_name(vnf)
+                    if vnf_machine != None:
+                        vnf_machine.add_controller(orchestrator)
+                    else:
+                        logging.debug("Unknown VNF (" + vnf + ") reference in VNF-VNFManager mapping")
+                                             
 
         for host in self.hosts:
             host.routing_table.add_default_gateway()
