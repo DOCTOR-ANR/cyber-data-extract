@@ -20,6 +20,22 @@ All next tags defined in the father Machine tag contain all the attributes relat
 - Type : String : NEGLIGEABLE/MINOR/MEDIUM/SEVERE/CATASTROPHIC
 - Usage : A value describing a security requirement related to this host.
 
+### Physical host (Optional)
+If the machine is a VM or a container, this section contains information related to the physical host it runs on.
+Note that VMs / containers can be nested : a container running in a VM running on a physical machine.
+
+#### Hostname
+- Type : String
+- Usage : The name of the physical host.
+
+#### Hypervisor
+- Type : String
+- Usage : The name of the hypervisor program running the VM/container.
+
+#### User
+- Type : String
+- Usage : The name of the user under which the hypervisor runs on the host.
+
 ### Interfaces - Interface
 These XML tags contain all the attributes related to an interface of a machine. Each <interface> tag is related to a specific network interface.
 
@@ -210,6 +226,25 @@ This contain all the lines of the flow matrix in this network (all authorized ac
 #### Protocol
 - Type : TCP/UDP/ICMP/ANY
 - Usage : The authorized protocol
+
+### NDN-Links - NDN-Link
+This contains all the NDN links of the network.
+
+#### Host-src
+- Type : String
+- Usage : The source host
+
+#### Face-src
+- Type : String
+- Usage : The face on the source host
+
+#### Host-dst
+- Type : String
+- Usage : The destination host
+
+#### Face-dst
+- Type : String
+- Usage : The face on the destination host
 
 # APPENDIX: Example topology file
 
