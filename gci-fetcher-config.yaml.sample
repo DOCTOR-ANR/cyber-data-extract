@@ -1,0 +1,11 @@
+# Configuration file for the gci-fetcher wrapper that periodically loads a
+# XML file, converts it to a CyberCAPTOR format and sends it to CyberCAPTOR
+
+# URL of the GCI server, exposing the topology file
+gci_url: http://127.0.0.1:9999/report.xml
+
+# Base URL of the CyberCAPTOR API
+cybercaptor_url: http://127.0.0.1:8080/
+
+# delay between consecutive calls, in seconds (default = 120)
+delay: 120

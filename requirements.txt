@@ -1,2 +1,5 @@
 sqlalchemy==0.9.4
 netaddr==0.7.11
+pyyaml
+requests
+
