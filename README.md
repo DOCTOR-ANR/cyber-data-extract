@@ -37,7 +37,7 @@ Now you can use the script to generate a XML topology file (for CyberCAPTOR-Serv
 Here is a typical use of the script to generate the .XML topology file :
 
 ```
-/usr/bin/python3 main.py --hosts-interfaces-file ./inputs/hosts-interfaces.csv --vlans-file ./inputs/vlan.csv --flow-matrix-file ./inputs/flow-matrix.csv --vulnerability-scan ./inputs/scan.nessus --routing-file ./inputs/routing.csv --to-fiware-xml-topology ./output/topology-generated.xml
+/usr/bin/python main.py --hosts-interfaces-file ./inputs/hosts-interfaces.csv --vlans-file ./inputs/vlan.csv --flow-matrix-file ./inputs/flow-matrix.csv --vulnerability-scan ./inputs/scan.nessus --routing-file ./inputs/routing.csv --to-fiware-xml-topology ./output/topology-generated.xml
 ```
 
 This execution of the script parse the following inputs files:
