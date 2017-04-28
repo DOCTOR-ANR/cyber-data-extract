@@ -31,4 +31,6 @@ RUN mkdir /opt/cybercaptor
 RUN cp /root/cyber-data-extract/vulnerability-remediation-database.db /opt/cybercaptor/vulnerability-remediation-database.db
 RUN pip install -r requirements.txt
 
-CMD ["/usr/bin/python", "/root/cyber-data-extract/gci-fetcher.py", "--config", "/root/cyber-data-extract/gci-fetcher-config.yaml"]
+ENV http_proxy ""
+ENV HTTP_PROXY ""
+CMD ["/usr/bin/python", "/root/cyber-data-extract/gci-fetcher.py", "--config", "/root/cyber-data-extract/gci-fetcher-config.yaml", "--mode", "local"]

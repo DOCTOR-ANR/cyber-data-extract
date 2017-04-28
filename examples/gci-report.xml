@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<report>
+<NFVOrchestrator>
+	<ID> ochestrateur_global </ID>
+	<NFVManagersNumber> 01 </NFVManagersNumber>
+	<State> 0 </State>
+	<VNFManagersIDs> VNFM_1 </VNFManagersIDs>
+	<VNFManagersStates> 0 </VNFManagersStates>
+	<VNFID-VLID> mme_1;l1 </VNFID-VLID>
+	<VNFID-VLID> mme_1;l2 </VNFID-VLID>
+	<VNFID-VLID> hss_1;l1 </VNFID-VLID>
+	<VNFID-VLID> sgw_1;l2 </VNFID-VLID>
+	<VNFID-VLID> sgw_1;l3 </VNFID-VLID>
+	<VNFID-VLID> pgw_1;l3 </VNFID-VLID>
+	<VNFID-VLID> pgw_1;l0 </VNFID-VLID>
+</NFVOrchestrator>
+
+<VIM>
+	<ID> vim_1 </ID>
+	<NFVOrchestratorID> ochestrateur_global </NFVOrchestratorID>
+     <VNF>
+	<ID> mme_1 </ID>
+	<VNFaddress> xx </VNFaddress>
+	<VNFStorageID> xx </VNFStorageID>
+	<VNFStorageName> xx </VNFStorageName>
+	<VNFTypeOfStorage> xx </VNFTypeOfStorage>
+	<VNFSizeOfStorage> xx </VNFSizeOfStorage>
+	<VNFOwnerId> xx </VNFOwnerId>
+	<VNFZoneId> xx </VNFZoneId>
+	<VNFHostId> h2 </VNFHostId>
+	<State> xx </State>
+	<VNFmetadata> xxx </VNFmetadata>
+	<VNFstartTime> xx </VNFstartTime>
+	<VNFendTime> xx </VNFendTime>
+	<VNFID-VLID> mme_1;l1 </VNFID-VLID>
+	<VNFID-VLID> mme_1;l2 </VNFID-VLID>
+     </VNF>
+
+     <VNF>
+	<ID> hss_1 </ID>
+	<VNFaddress> xx </VNFaddress>
+	<VNFStorageID> xx </VNFStorageID>
+	<VNFStorageName> xx </VNFStorageName>
+	<VNFTypeOfStorage> xx </VNFTypeOfStorage>
+	<VNFSizeOfStorage> xx </VNFSizeOfStorage>
+	<VNFOwnerId> xx </VNFOwnerId>
+	<VNFZoneId> xx </VNFZoneId>
+	<VNFHostId> h1 </VNFHostId>
+	<State> xx </State>
+	<VNFmetadata> xxx </VNFmetadata>
+	<VNFstartTime> xx </VNFstartTime>
+	<VNFendTime> xx </VNFendTime>
+	<VNFID-VLID> hss_1;l1 </VNFID-VLID>
+     </VNF>
+
+     <VNF>
+	<ID> sgw_1 </ID>
+	<VNFaddress> xx </VNFaddress>
+	<VNFStorageID> xx </VNFStorageID>
+	<VNFStorageName> xx </VNFStorageName>
+	<VNFTypeOfStorage> xx </VNFTypeOfStorage>
+	<VNFSizeOfStorage> xx </VNFSizeOfStorage>
+	<VNFOwnerId> xx </VNFOwnerId>
+	<VNFZoneId> xx </VNFZoneId>
+	<VNFHostId> h3 </VNFHostId>
+	<State> xx </State>
+	<VNFmetadata> xxx </VNFmetadata>
+	<VNFstartTime> xx </VNFstartTime>
+	<VNFendTime> xx </VNFendTime>
+	<VNFID-VLID> sgw_1;l2 </VNFID-VLID>
+	<VNFID-VLID> sgw_1;l3 </VNFID-VLID>
+     </VNF>
+
+     <VNF>
+	<ID> pgw_1 </ID>
+	<VNFaddress> xx </VNFaddress>
+	<VNFStorageID> xx </VNFStorageID>
+	<VNFStorageName> xx </VNFStorageName>
+	<VNFTypeOfStorage> xx </VNFTypeOfStorage>
+	<VNFSizeOfStorage> xx </VNFSizeOfStorage>
+	<VNFOwnerId> xx </VNFOwnerId>
+	<VNFZoneId> xx </VNFZoneId>
+	<VNFHostId> h3 </VNFHostId>
+	<State> xx </State>
+	<VNFmetadata> xxx </VNFmetadata>
+	<VNFstartTime> xx </VNFstartTime>
+	<VNFendTime> xx </VNFendTime>
+	<VNFID-VLID> pgw_1;l3 </VNFID-VLID>
+	<VNFID-VLID> pgw_1;l0 </VNFID-VLID>
+     </VNF>	
+</VIM>
+
+<VNFManager>
+	<ID> vnfm_1 </ID>
+	<State> 0 </State>
+	<NFVOrchestratorID> ochestrateur_global </NFVOrchestratorID>
+	<VNFsnumber> 4 </VNFsnumber>
+	<VNFsIds> mme_1; hss_1; sgw_1; pgw_1 </VNFsIds>
+	<VNFsStates> 0; 0; 0; 0 </VNFsStates>
+</VNFManager>
+
+<MME-VNF>
+	<ID> mme_1 </ID> 
+	<VNFManagerId> vnfm_1 </VNFManagerId>
+	<VIMId> xx </VIMId>
+	<MME-VNFState> 0 </MME-VNFState>
+	<SwImageDescriptor> xx </SwImageDescriptor>
+	<VirtualStorageDescriptor> xx </VirtualStorageDescriptor>
+	<More> xx </More>
+</MME-VNF>
+
+<HSS-VNF>
+	<ID> hss_1 </ID> 
+	<VNFManagerId> vnfm_1 </VNFManagerId>
+	<VIMId> xx </VIMId>
+	<HSS-VNFState> 0 </HSS-VNFState>
+	<SwImageDescriptor> xx </SwImageDescriptor>
+	<VirtualStorageDescriptor> xx </VirtualStorageDescriptor>
+	<More> xx </More>
+</HSS-VNF>
+
+<S-GW-VNF>
+	<ID> sgw_1 </ID> 
+	<VNFManagerId> vnfm_1 </VNFManagerId>
+	<VIMId> xx </VIMId>
+	<S-GW-VNFState> 0 </S-GW-VNFState>
+	<SwImageDescriptor> xx </SwImageDescriptor>
+	<VirtualStorageDescriptor> xx </VirtualStorageDescriptor>
+	<More> xx </More>
+</S-GW-VNF>
+
+<P-GW-VNF>
+	<ID> pgw_1 </ID> 
+	<VNFManagerId> vnfm_1 </VNFManagerId>
+	<VIMId> xx </VIMId>
+	<P-GW-VNFState> 0 </P-GW-VNFState>
+	<SwImageDescriptor> xx </SwImageDescriptor>
+	<VirtualStorageDescriptor> xx </VirtualStorageDescriptor>
+	<More> xx </More>
+</P-GW-VNF>
+
+
+<vul>
+	<ID> vul_1 </ID>
+	<ID-VNF> mme_1 </ID-VNF>
+	<Service>
+		<ID>apache2</ID>
+		<Version> 2.2.4-rc10 </Version>
+		<Protocol> TCP </Protocol>
+		<Port> 443 </Port>
+		<Descriptor> CVE-2013-2249 </Descriptor>
+	</Service>
+</vul>
+
+<vul>
+	<ID> vul_2 </ID>
+	<ID-VNF> sgw_1 </ID-VNF>
+	<Service>
+		<ID>postgreSQL</ID>
+		<Version> 42 </Version>
+		<Protocol> TCP </Protocol>
+		<Port> 5432 </Port>
+		<Descriptor> CVE-2013-1903 </Descriptor>
+	</Service>
+</vul>
+
+<vul>
+	<ID> vul_3 </ID>
+	<ID-VNF> pgw_1 </ID-VNF>
+	<Service>
+		<ID>apache2</ID>
+		<Version> unknown </Version>
+		<Protocol> TCP </Protocol>
+		<Port> 80 </Port>
+		<Descriptor> CVE-2011-3192 </Descriptor>
+	</Service>
+</vul>
+
+
+</report>

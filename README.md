@@ -126,7 +126,12 @@ Input generation from GCI XML file can be automated using the `gci-fetcher.py` f
 
 ```
 cp gci-fetcher-config.yaml.sample gci-fetcher-config.yaml
+nano gci-fetcher-config.yaml
 ```
+
+2) Edit the Dockerfile for local use:
+If the GCI file is exposed on a remote server, add the '--mode remote' switch to the CMD line.
+If it is present inside the container (for tests), add the '--mode local' switch to the CMD line and set the gci_local_file path appropriately in the config file.
 
 2) Build the container
 
