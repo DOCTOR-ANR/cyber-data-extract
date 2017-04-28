@@ -1,10 +1,6 @@
 CyberCAPTOR-Data-Extraction
 ==============
 
-This project is part of FIWARE. For more information, please consult [FIWARE website](http://www.fiware.org/).
-
-CyberCAPTOR is an implementation of the Cyber Security Generic Enabler, the future developments of the [Security Monitoring GE](http://catalogue.fiware.org/enablers/security-monitoring).
-
 ## Table of Contents
 
 - [CyberCAPTOR-Data-Extraction](#cybercaptor-data-extraction)
@@ -15,22 +11,23 @@ CyberCAPTOR is an implementation of the Cyber Security Generic Enabler, the futu
 
 ## Prerequisite
 
-- Python > 3.4
-- pip for Python 3 > 1.5
+- Python >= 2.7
+- pip
+- git-lfs
 
 ## Build
 
 1) Get sources from Github
 
 ```
-git clone https://github.com/fiware-cybercaptor/cybercaptor-data-extraction.git
-cd cybercaptor-data-extraction
+git clone https://github.com/DOCTOR-ANR/cyber-data-extract.git
+cd cyber-data-extract
 ```
 
 2) Use pip to download dependencies
 
 ```
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Use the script
