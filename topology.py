@@ -586,7 +586,7 @@ class Topology:
         vlans_index = 0
         vlans_range = "10.99.0.0"
         orchestrators_managers = [] # contains pairs of [orchestrator, manager]
-        managers_vnfs = [] # contains pairs of [manager, vnf]
+        managers_vnfs = [] # contains pairs of
         number_of_added_vulnerabilities = 0
         
         for c in root:
@@ -753,6 +753,97 @@ class Topology:
         
         logging.info("[X] Load topology from XML GCI file done") 
     
+    
+    def convert_from_mmt_xml_file(self, mmt_xml_file, topology_xml_file):
+        logging.info("Loading topology from XML MMT file")
+        tree = ET.parse(mmt_xml_file)
+        root = tree.getroot()
+        
+        logging.info("Loading in memory the vulnerability database")
+        vulnerability_database = load_vulnerability_database()
+        
+        for machine in root.findall("machine"):
+            services = machine.find("services")
+            for service in services.findall("service"):
+                svc_name = service.find("name").text
+                print "Found service %s on machine %s" % (svc_name, machine.find("name").text)
+                svc_ipaddr_element = service.find("ipaddress")
+                if svc_ipaddr_element != None:
+                    svc_ipaddr = svc_ipaddr_element.text
+                else:
+                    svc_ipaddr = ""
+                svc_proto_element = service.find("protocol")
+                if svc_proto_element != None:
+                    svc_proto = svc_proto_element.text
+                else:
+                    svc_proto = "ALL"
+                svc_port_element = service.find("port")
+                if svc_port_element != None:
+                    svc_port = int(svc_port_element.text)
+                else:
+                    svc_port = 0
+                svc_cpe_element = service.find("cpe")
+                if svc_cpe_element != None:
+                    svc_cpe = svc_cpe_element.text
+                else:
+                    svc_cpe = ""
+                
+                print "Found service %s on machine %s" % (svc_name, machine.find("name").text)
+                
+                new_service = ET.Element("service")
+                new_service_name = ET.SubElement(new_service, "name")
+                new_service_ipaddr = ET.SubElement(new_service, "ipaddress")
+                new_service_proto = ET.SubElement(new_service, "protocol")
+                new_service_port = ET.SubElement(new_service, "port")
+                new_service_vulnerabilities = ET.SubElement(new_service, "vulnerabilities")
+                
+                new_service_name.text = svc_name
+                if svc_ipaddr != None:
+                    new_service_ipaddr = svc_ipaddr
+                new_service_proto = svc_proto
+                new_service_port = svc_port
+                
+                # query the bdd for CVE related to the CPE
+                cves = get_cve_from_cpe(svc_cpe)
+                for cve in cves:
+                    # need to query the CVSS, type and goal of the CVE (type and goal are deduced from access_vector)
+                    cvss = get_cvss_from_cve(cve)
+                    vuln_element = ET.SubElement(new_service_vulnerabilities, "vulnerability")
+                    vuln_type_element = ET.SubElement(vuln_element, "type")
+                    vuln_cve_element = ET.SubElement(vuln_element, "cve")
+                    vuln_goal_element = ET.SubElement(vuln_element, "goal")
+                    vuln_cvss_element = ET.SubElement(vuln_element, "cvss")
+                    
+                    vuln_cvss_element.text = cvss['score']
+                    vuln_cve_element.text = cve
+                    if cvss['access_vector'] == "NETWORK":
+                        vuln_type_element.text = "remoteExploit"
+                        vuln_goal_element.text = "privEscalation"
+                    elif cvss['access_vector'] == "LOCAL":
+                        vuln_type_element.text = "localExploit"
+                        vuln_goal_element.text = "privEscalation"
+                    elif cvss['access_vector'] == "SIGNATURE":
+                        vuln_type_element.text = "signatureExploit"
+                        vuln_goal_element.text = "cachePoisoned"
+                    elif cvss['access_vector'] == "FIB":
+                        vuln_type_element.text = "fibExploit"
+                        vuln_goal_element.text = "corruptFib"
+                    elif cvss['access_vector'] == "PIT":
+                        vuln_type_element.text = "pitExploit"
+                        vuln_goal_element.text = "cachePoisoned"
+                    else:
+                        logging.warning("CVE " + cve + " has unknown access vector loaded from database : " + cvss['access_vector'])
+                
+                        
+                service = new_service
+         
+        logging.info("[ ] Generating XML topology file " + topology_xml_file)
+        indent_xml(root)
+        ET.ElementTree(root).write(topology_xml_file)
+        logging.info("[X] XML topology file generation done")
+        
+        return        
+                
     
     def to_mulval_input_file(self, mulval_input_file_path):
         logging.info("[ ] Exporting the topology as mulval input file " + mulval_input_file_path)
@@ -1617,7 +1708,26 @@ def load_vulnerability_database():
     for database_vulnerability in database_vulnerabilities:
         vulnerability_database[database_vulnerability.cve] = database_vulnerability
     return vulnerability_database
-
+    
+# Query the database for CVE ids linked to a CPE
+# returns an array of CVE names (strings) for the given CVE
+def get_cve_from_cpe(cpe):
+    result = db_session.execute("select a as cve from (select vulnerability.cve as a, vulnerability.id as b, cpe_vulnerability.id_cpe as c, cpe_vulnerability.id_vulnerability as d, cpe.id as e, cpe.cpe_id as f from cpe, cpe_vulnerability, vulnerability where e = c and d = b and f = :cpe_string)", { 'cpe_string' : cpe} )
+    cve_array = []
+    for row in result:
+        cve_array.append(row['cve'])
+    return cve_array
+    
+# Query the database for CVSS score and access vector
+# returns a pair [access_vector, score] for the given CVE
+def get_cvss_from_cve(cve):
+    result = db_session.execute("select score, access_vector from (select cvss.id as a, cvss.score as score, cvss.access_vector as access_vector, vulnerability.cve as cve, vulnerability.id as b from cvss, vulnerability where a = b and cve = :cve_string)", { 'cve_string' : cve })
+    cvss = {}
+    for row in result:
+        cvss['access_vector'] = row['access_vector']
+        cvss['score'] = row['score']
+    return cvss
+    
 
 class FlowMatrix:
     def __init__(self, topology, csv_file=None):

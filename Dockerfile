@@ -33,4 +33,4 @@ RUN pip install -r requirements.txt
 
 ENV http_proxy ""
 ENV HTTP_PROXY ""
-CMD ["/usr/bin/python", "/root/cyber-data-extract/gci-fetcher.py", "--config", "/root/cyber-data-extract/gci-fetcher-config.yaml", "--mode", "local"]
+CMD ["/usr/bin/python", "/root/cyber-data-extract/auto-fetcher.py", "--config", "/root/cyber-data-extract/auto-fetcher-config.yaml"]

@@ -7,7 +7,7 @@ CyberCAPTOR-Data-Extraction
 	- [Prerequisite](#prerequisite)
 	- [Build](#build)
 	- [Use the script](#use-the-script)
-	- [Docker build for GCI integration](#Docker-build-for-CGI-integration)
+	- [Docker build for GCI and MMT integration](#Docker-build-for-CGI-MMT-integration)
 
 ## Prerequisite
 
@@ -51,6 +51,7 @@ This execution of the script parse the following inputs files:
   - `./inputs/controllers-hosts.csv`: The CSV file describing placement of machines (physical and virtual) in orchestration domains.
   - `./inputs/ndn-topo.csv`: The CSV file describing NDN links, in the case of a hybrid IP/NDN network.
   - `./inputs/input-gci.xml`: The entire topology from Generic Collector Interface (XML file). If this file is provided, no other is needed or read.
+  - `./inputs/input-mmt.xml`: The entire topology from MMT Operator (XML file). If this file is provided, no other is needed or read.
   
 The complete description of the inputs files can be found in [./doc/inputs-file-specifications.md](./doc/inputs-file-specifications.md).
 
@@ -72,6 +73,7 @@ usage: main.py [-h] --hosts-interfaces-file HOSTS_INTERFACES_FILE
 	[--vm-mapping-file HOST_VM_FILE [HOST_VM_FILE ...]]
 	[--controllers-file HOST_CONTROLLER_FILE [HOST_CONTROLLER_FILE ...]]
 	[--gci-file GCI_INPUT_FILE]
+	[--mmt-file MMT_INPUT_FILE]
 	[--ndn-topology-file NDN_TOPOLOGY_FILE]
 	[--mulval-output-file MULVAL_OUTPUT_FILE] 
 	[--to-fiware-xml-topology TO_FIWARE_XML_TOPOLOGY] 
@@ -105,6 +107,10 @@ optional arguments:
                         The XML file provided by the Generic Collector Interface :
                         It contains all the topology and should be used with no
                         other input file.
+  --mmt-file MMT_INPUT_FILE
+                        The XML file provided by the MMT Operator tool :
+                        It contains all the topology and should be used with no
+                        other input file.
   --ndn-topology-file NDN_TOPOLOGY_FILE
                         The CSV file containing NDN links, in the case of a
                         hybrid IP/NDN network.
@@ -118,20 +124,19 @@ optional arguments:
   -vv                   Set log printing level to DEBUG
 ```
 
-## Docker build for CGI integration
+## Docker build for CGI and MMT integration
 
-Input generation from GCI XML file can be automated using the `gci-fetcher.py` file, and packaged in a standalone Docker container.
+Input generation from GCI or MMT XML file can be automated using the `auto-fetcher.py` file, and packaged in a standalone Docker container.
 
 1) Copy and edit the config file
 
 ```
-cp gci-fetcher-config.yaml.sample gci-fetcher-config.yaml
-nano gci-fetcher-config.yaml
+cp auto-fetcher-config.yaml.sample auto-fetcher-config.yaml
+nano auto-fetcher-config.yaml
 ```
 
-2) Edit the Dockerfile for local use:
-If the GCI file is exposed on a remote server, add the '--mode remote' switch to the CMD line.
-If it is present inside the container (for tests), add the '--mode local' switch to the CMD line and set the gci_local_file path appropriately in the config file.
+The `input` field can be either `gci` or `mmt`.
+The `mode` field can be either `local` or `remote`. If it is set to `remote`, the input file will be fetched from the `source_url` URL, otherwise it will use the `local_input_file` file. In this last case, add the local file to the `examples/` directory.
 
 2) Build the container
 

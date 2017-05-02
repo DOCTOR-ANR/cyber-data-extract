@@ -61,6 +61,9 @@ def main():
                        
     parser.add_argument('--gci-file', dest='gci_xml_file', required=False,
                         help='The XML file containing the network topology from the Orange GCI interface')
+                        
+    parser.add_argument('--mmt-file', dest='mmt_xml_file', required=False,
+                        help='The XML file containing the network topology from the Montimage MMT Operator')
         
     parser.add_argument('--mulval-output-file', dest='mulval_output_file', required=False,
                         help='The output path where the mulval input file will be stored.')
@@ -130,6 +133,9 @@ def main():
         
     if args.gci_xml_file:
         topology.load_from_gci_xml_file(args.gci_xml_file)
+        
+    if args.mmt_xml_file and args.to_fiware_xml_topology:
+        topology.convert_from_mmt_xml_file(args.mmt_xml_file, args.to_fiware_xml_topology)
 
     if args.display_infos:
         topology.print_details()
@@ -137,7 +143,7 @@ def main():
     if args.mulval_output_file:
         topology.to_mulval_input_file(args.mulval_output_file)
 
-    if args.to_fiware_xml_topology:
+    if args.to_fiware_xml_topology and not args.mmt_xml_file:
         topology.to_fiware_topology_file(args.to_fiware_xml_topology)
 
 if __name__ == '__main__':
