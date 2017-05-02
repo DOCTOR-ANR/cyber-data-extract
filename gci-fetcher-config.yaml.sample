@@ -4,6 +4,9 @@
 # URL of the GCI server, exposing the topology file
 gci_url: http://127.0.0.1:9999/report.xml
 
+# Path for the local GCI report
+gci_local_file: /root/cyber-data-extract/examples/gci-report.xml
+
 # Base URL of the CyberCAPTOR API
 cybercaptor_url: http://127.0.0.1:8080/
 
