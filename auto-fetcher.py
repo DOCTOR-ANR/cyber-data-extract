@@ -21,10 +21,15 @@ if delay < 2:
     delay = 2
 
 while True:
+
+    print "begin loop"
+
     ok = True
     try:
+        print( "config[mode] == ", config['mode'])
         if config['mode'] != "local":
             # fetch remote file
+            print( "config[source_url] == ", config['source_url'])
             request_input = requests.get(config['source_url'])
             if request_input.status_code != 200:
                 print "Got status code %d for %s request" % (request_input.status_code, config['input'])
@@ -54,12 +59,14 @@ while True:
                     print "Got anormal response for cybercaptor request : %s" % request_cybercaptor.text
                     ok = False
     except:
-        print "[FAILURE]"
+        print "[FAILURE] exception caught"
     else:
         if ok:
             print "[SUCCESS]"
         else:
-            print "[FAILURE]"
+            print "[FAILURE] bad http result code"
             
+    print "before sleep"
     time.sleep(delay)
+    print "end loop"
 

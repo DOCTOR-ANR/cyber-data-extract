@@ -659,10 +659,16 @@ class Topology:
                 for element in c:
                     if element.tag == "ID":
                         vnfID = element.text.lower().strip(' ')
-                    if element.tag == "VNFManagerID":
+                    if element.tag == "VNFManagerId":
                         vnfManagerID = element.text.lower().strip(' ')
                 if vnfID != "" and vnfManagerID != "":
                     managers_vnfs.append([vnfManagerID, vnfID])
+                    # add VNF manager id to Host
+                    host = self.get_host_by_name(vnfID)
+                    if host:
+                        host._vnf_manager_id = vnfManagerID
+                    else:
+                       logging.warning("Did not find in the topology a host named : " + host.name)
                     
             if c.tag == "vul":
                 # add a vulnerability
@@ -715,11 +721,7 @@ class Topology:
 
                                     service = Service(svc_name, my_ip, port, protocol, svc_type)
                                     if port == 0:
-                                        if "global_name" in host_service:
-                                            service.set_global_name(host_service["global_name"]) # the global name to reference the service from another host (for instance to determine which orchestrator controls which hosts)
-                                        else:
-                                            logging.warning("Local service has no global_name set, using hostname instead : " + host.name)
-                                            service.set_global_name(host.name + '_' + svc_name)
+                                        service.set_global_name(host.name + '_' + svc_name)
                  
                                     logging.debug(
                                             "Vulnerable service : '" + svc_name + "' exposed on port " + str(
@@ -732,20 +734,19 @@ class Topology:
                                         number_of_added_vulnerabilities += 1
                                     host.add_service(service)
                                  
-        # build the direct mapping NFV orchrstrators -> VNFs
+        # build the direct mapping NFV orchestrators -> VNFs
         for o_m in orchestrators_managers:
             orchestrator = o_m[0]
             manager = o_m[1]
             for m_v in managers_vnfs:
                 manager1 = m_v[0]
                 vnf = m_v[1]
-                if  manager == manager1:
+                if manager == manager1:
                     vnf_machine = self.get_host_by_name(vnf)
                     if vnf_machine != None:
                         vnf_machine.add_controller(orchestrator)
                     else:
                         logging.debug("Unknown VNF (" + vnf + ") reference in VNF-VNFManager mapping")
-                                             
 
         for host in self.hosts:
             host.routing_table.add_default_gateway()
@@ -1255,6 +1256,7 @@ class Host:
         self._physical_host = ""
         self._physical_process = ""
         self._physical_user = ""
+        self._vnf_manager_id = ""
 
     @property
     def services(self):
@@ -1350,6 +1352,10 @@ class Host:
                 result.append(interface.vlan)
         return result
     
+    @property
+    def vnfManagerId(self):
+        return self._vnf_manager_id
+
     def to_fiware_topology_xml_element(self):
         element = ET.Element('machine')
         machine_name = ET.SubElement(element, 'name')
@@ -1388,7 +1394,9 @@ class Host:
         for ndnservice in self.ndnservices:
             services_element.append(ndnservice.to_fiware_topology_xml_element())
         
-        
+        if self._vnf_manager_id != "":
+            vnf_manager_id = ET.SubElement(element, 'vnfmanagerid')
+            vnf_manager_id.text = self.vnfManagerId
         
         element.append(self.routing_table.to_fiware_topology_xml_element())
 
@@ -1685,16 +1693,23 @@ class Service:
             for vulnerability in self.vulnerabilities:
                 vulnerability_element = ET.SubElement(vulnerabilities_element, 'vulnerability')
                 access_vector = vulnerability.cvss.access_vector
-                if access_vector == "LOCAL":
-                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
-                    vulnerability_type.text = "localExploit"
-                elif access_vector == "NETWORK":
-                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
-                    vulnerability_type.text = "remoteExploit"
+
                 vulnerability_cve = ET.SubElement(vulnerability_element, 'cve')
                 vulnerability_cve.text = str(vulnerability.cve)
                 vulnerability_goal = ET.SubElement(vulnerability_element, 'goal')
-                vulnerability_goal.text = "privEscalation"
+
+                if access_vector == "VNFM_PROT":
+                    vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                    vulnerability_type.text = "protocolExploit"
+                    vulnerability_goal.text = "vnfmAttack"
+                else:
+                    if access_vector == "LOCAL":
+                        vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                        vulnerability_type.text = "localExploit"
+                    elif access_vector == "NETWORK":
+                        vulnerability_type = ET.SubElement(vulnerability_element, 'type')
+                        vulnerability_type.text = "remoteExploit"
+                    vulnerability_goal.text = "privEscalation"
                 vulnerability_cvss = ET.SubElement(vulnerability_element, 'cvss')
                 vulnerability_cvss.text = str(vulnerability.cvss.score)
 
