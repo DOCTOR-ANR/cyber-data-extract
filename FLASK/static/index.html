@@ -1,0 +1,67 @@
+<DOCTYPE! HTML>
+
+<html>
+
+	<head>
+	</head>
+
+	<body>
+
+		<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+		<h1>cyber-data-extract configuration</h1>
+
+		<form action="/change_configuration" method="post">
+
+			<h2>PULSAR API URL</h2>
+			<input type="text" name="api_url" value="http://10.99.0.1:8080/"  size=64>
+
+			<h2>Cycle duration</h2>
+			Duration in sec <input type="number" name="duration" value="30" >
+
+			<h2>Input format</h2>
+			<input type="radio" name="format_type" value="gci" checked> GCI format<br>
+			<input type="radio" name="format_type" value="mmt" > MMT format<br>
+
+			<br> 
+			<input type="submit" value="Change configuration">
+			<br> 
+
+			<h2>Mode</h2>
+			<input type="radio" name="mode" id="radio_remote" value="remote"> remote : fetch the input file from a remote server<br>
+			<input type="radio" name="mode" id="radio_local"  value="local"> local : use an embedded file<br>
+
+			<div id="topology_url">
+			<h2>Topology file URL</h2>
+			<input type="url" name="topology_url" value="http://172.17.22.81:8087/gci-report.txt" size=64>
+			</div>
+
+			<div id="topology_path">
+			<h2>Local topology file</h2>
+			<input type="radio" name="local_file" value="/root/cyber-data-extract/examples/gci-report.xml"> gci-report.xml<br>
+			<input type="radio" name="local_file" value="/root/cyber-data-extract/examples/gci-report2.xml" checked> gci-report2.xml<br>
+			<input type="radio" name="local_file" value="/root/cyber-data-extract/examples/mmt-report.xml"> mmt-report.xml<br>
+			</div>
+
+			<script>
+
+				$( "#radio_remote" ).click( function( ) {
+					$( "#topology_url" ).show()
+					$( "#topology_path" ).hide()
+				});
+				$( "#radio_local" ).click( function( ) {
+					$( "#topology_url" ).hide()
+					$( "#topology_path" ).show()
+				});
+			 
+				$( document ).ready(function() {
+					$( "#radio_local" ).click()
+				});
+
+			</script>
+
+		</form>
+
+	</body>
+
+</html>

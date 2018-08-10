@@ -760,87 +760,94 @@ class Topology:
         tree = ET.parse(mmt_xml_file)
         root = tree.getroot()
         
+        print("Loading in memory the vulnerability database")
         logging.info("Loading in memory the vulnerability database")
         vulnerability_database = load_vulnerability_database()
         
+        def value_from_elt_with_default( root, name, default ):
+	    elt = root.find( name )
+            return elt.text if elt != None else default
+
         for machine in root.findall("machine"):
             services = machine.find("services")
+            new_services = []
             for service in services.findall("service"):
-                svc_name = service.find("name").text
+
+                svc_name   = value_from_elt_with_default( service, 'name',      'no-name' )
+
                 print "Found service %s on machine %s" % (svc_name, machine.find("name").text)
-                svc_ipaddr_element = service.find("ipaddress")
-                if svc_ipaddr_element != None:
-                    svc_ipaddr = svc_ipaddr_element.text
-                else:
-                    svc_ipaddr = ""
-                svc_proto_element = service.find("protocol")
-                if svc_proto_element != None:
-                    svc_proto = svc_proto_element.text
-                else:
-                    svc_proto = "ALL"
-                svc_port_element = service.find("port")
-                if svc_port_element != None:
-                    svc_port = int(svc_port_element.text)
-                else:
-                    svc_port = 0
-                svc_cpe_element = service.find("cpe")
-                if svc_cpe_element != None:
-                    svc_cpe = svc_cpe_element.text
-                else:
-                    svc_cpe = ""
-                
-                print "Found service %s on machine %s" % (svc_name, machine.find("name").text)
+
+                svc_ipaddr = value_from_elt_with_default( service, 'ipaddress', '' )
+                svc_proto  = value_from_elt_with_default( service, 'protocol',  'ALL' )
+                svc_port   = value_from_elt_with_default( service, 'port',      '0' )
+                svc_cpe    = value_from_elt_with_default( service, 'cpe',       None )
                 
                 new_service = ET.Element("service")
-                new_service_name = ET.SubElement(new_service, "name")
-                new_service_ipaddr = ET.SubElement(new_service, "ipaddress")
-                new_service_proto = ET.SubElement(new_service, "protocol")
-                new_service_port = ET.SubElement(new_service, "port")
-                new_service_vulnerabilities = ET.SubElement(new_service, "vulnerabilities")
-                
+
+                new_service_name            = ET.SubElement(new_service, "name")
                 new_service_name.text = svc_name
-                if svc_ipaddr != None:
-                    new_service_ipaddr = svc_ipaddr
-                new_service_proto = svc_proto
-                new_service_port = svc_port
+
+                new_service_ipaddr          = ET.SubElement(new_service, "ipaddress")
+                new_service_ipaddr.text = svc_ipaddr
+
+                new_service_proto           = ET.SubElement(new_service, "protocol")
+                new_service_proto.text = svc_proto
+
+                new_service_port            = ET.SubElement(new_service, "port")
+                new_service_port.text = svc_port
+
+                new_service_cpe             = ET.SubElement(new_service, "cpe")
+                new_service_cpe.text = svc_cpe
+
+                if svc_cpe != None:
+
+                    new_service_vulnerabilities = ET.SubElement(new_service, "vulnerabilities")
                 
-                # query the bdd for CVE related to the CPE
-                cves = get_cve_from_cpe(svc_cpe)
-                for cve in cves:
-                    # need to query the CVSS, type and goal of the CVE (type and goal are deduced from access_vector)
-                    cvss = get_cvss_from_cve(cve)
-                    vuln_element = ET.SubElement(new_service_vulnerabilities, "vulnerability")
-                    vuln_type_element = ET.SubElement(vuln_element, "type")
-                    vuln_cve_element = ET.SubElement(vuln_element, "cve")
-                    vuln_goal_element = ET.SubElement(vuln_element, "goal")
-                    vuln_cvss_element = ET.SubElement(vuln_element, "cvss")
+                    # query the bdd for CVE related to the CPE
+                    cves = get_cve_from_cpe(svc_cpe)
+                    for cve in cves:
+                        print('cve ', cve )
+                        # need to query the CVSS, type and goal of the CVE (type and goal are deduced from access_vector)
+                        cvss = get_cvss_from_cve(cve)
+                        print('cvss ', cvss )
+                        vuln_element = ET.SubElement(new_service_vulnerabilities, "vulnerability")
+                        vuln_type_element = ET.SubElement(vuln_element, "type")
+                        vuln_cve_element  = ET.SubElement(vuln_element, "cve")
+                        vuln_goal_element = ET.SubElement(vuln_element, "goal")
+                        vuln_cvss_element = ET.SubElement(vuln_element, "cvss")
                     
-                    vuln_cvss_element.text = cvss['score']
-                    vuln_cve_element.text = cve
-                    if cvss['access_vector'] == "NETWORK":
-                        vuln_type_element.text = "remoteExploit"
-                        vuln_goal_element.text = "privEscalation"
-                    elif cvss['access_vector'] == "LOCAL":
-                        vuln_type_element.text = "localExploit"
-                        vuln_goal_element.text = "privEscalation"
-                    elif cvss['access_vector'] == "SIGNATURE":
-                        vuln_type_element.text = "signatureExploit"
-                        vuln_goal_element.text = "cachePoisoned"
-                    elif cvss['access_vector'] == "FIB":
-                        vuln_type_element.text = "fibExploit"
-                        vuln_goal_element.text = "corruptFib"
-                    elif cvss['access_vector'] == "PIT":
-                        vuln_type_element.text = "pitExploit"
-                        vuln_goal_element.text = "cachePoisoned"
-                    else:
-                        logging.warning("CVE " + cve + " has unknown access vector loaded from database : " + cvss['access_vector'])
+                        vuln_cvss_element.text = str(cvss['score'])
+                        vuln_cve_element.text = cve
+
+                        if cvss['access_vector'] == "NETWORK":
+                            vuln_type_element.text = "remoteExploit"
+                            vuln_goal_element.text = "privEscalation"
+                        elif cvss['access_vector'] == "LOCAL":
+                            vuln_type_element.text = "localExploit"
+                            vuln_goal_element.text = "privEscalation"
+                        elif cvss['access_vector'] == "SIGNATURE":
+                            vuln_type_element.text = "signatureExploit"
+                            vuln_goal_element.text = "cachePoisoned"
+                        elif cvss['access_vector'] == "FIB":
+                            vuln_type_element.text = "fibExploit"
+                            vuln_goal_element.text = "corruptFib"
+                        elif cvss['access_vector'] == "PIT":
+                            vuln_type_element.text = "pitExploit"
+                            vuln_goal_element.text = "cachePoisoned"
+                        else:
+                            logging.warning("CVE " + cve + " has unknown access vector loaded from database : " + cvss['access_vector'])
                 
-                        
-                service = new_service
+                new_services.append(new_service)
+
+            services.clear()
+            for new_service in new_services:
+                services.append(new_service)
          
+        print("[ ] Generating XML topology file " + topology_xml_file)
         logging.info("[ ] Generating XML topology file " + topology_xml_file)
         indent_xml(root)
         ET.ElementTree(root).write(topology_xml_file)
+        print("[X] XML topology file generation done")
         logging.info("[X] XML topology file generation done")
         
         return        
@@ -848,8 +855,10 @@ class Topology:
     
     def to_mulval_input_file(self, mulval_input_file_path):
         logging.info("[ ] Exporting the topology as mulval input file " + mulval_input_file_path)
-        # TODO (priority low): don't add to the file a line that was already added (suppress useless duplicates)
         mulval_input_file = open(mulval_input_file_path, "w")
+
+        # init vul properties
+        vul_properties = set()
 
         ### Add Internet
         mulval_input_file.write("attackerLocated(internet_host).\n")
@@ -931,29 +940,23 @@ class Topology:
                         if vulnerability.cvss.access_vector == "NETWORK":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "LOCAL":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "SIGNATURE":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "FIB":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', fibExploit, corruptFib).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "PIT":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', pitExploit, cachePoisonned).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
-                            #TODO (priority low): only add this line once for all hosts.
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
 
             # add NDN services
             for service in host.ndnservices:
@@ -981,29 +984,29 @@ class Topology:
                         if vulnerability.cvss.access_vector == "NETWORK":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', remoteExploit, privEscalation).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "LOCAL":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', localExploit, privEscalation).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "SIGNATURE":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', signatureExploit, cachePoisonned).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "FIB":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', fibExploit, corruptFib).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
                         elif vulnerability.cvss.access_vector == "PIT":
                             mulval_input_file.write(
                                 "vulProperty('" + vulnerability.cve + "', pitExploit, cachePoisonned).\n")
-                            mulval_input_file.write(
-                                "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
+                            vul_properties.add( "vulExists('" + hostname + "','" + vulnerability.cve + "', '" + svc_name + "').\n")
             
+        # Add vulnerability properties
+        mulval_input_file.write("\n\n/****\n *** List of vulnerability properties\n ***/\n")
+        for vp in sorted(list(vul_properties)):
+            mulval_input_file.write(vp)
+
         # Add IP flow matrix
         mulval_input_file.write("\n\n/****\n *** IP flow matrix\n ***/\n")
         
@@ -1070,7 +1073,8 @@ class Topology:
         # add NDN links
         mulval_input_file.write("\n\n/****\n *** NDN links\n ***/\n")
         for ndn_link in self.ndn_links:
-            mulval_input_file.write("faceIsLinked('" + ndn_link.host_local.name + "_" + ndn_link.face_local + "','" + ndn_link.host_distant.name + "_" + ndn_link.face_distant + "').\n")
+            mulval_input_file.write("faceIsLinked('" + ndn_link.host_local.name   + "_" + ndn_link.face_local   + "','" + ndn_link.host_distant.name + "_" + ndn_link.face_distant + "').\n")
+            mulval_input_file.write("faceIsLinked('" + ndn_link.host_distant.name + "_" + ndn_link.face_distant + "','" + ndn_link.host_local.name   + "_" + ndn_link.face_local   + "').\n")
             
         logging.info("[X] MulVAL input file generation done")
 

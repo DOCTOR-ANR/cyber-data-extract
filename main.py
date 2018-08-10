@@ -135,6 +135,8 @@ def main():
         topology.load_from_gci_xml_file(args.gci_xml_file)
         
     if args.mmt_xml_file and args.to_fiware_xml_topology:
+	print(args.mmt_xml_file)
+	print(args.to_fiware_xml_topology)
         topology.convert_from_mmt_xml_file(args.mmt_xml_file, args.to_fiware_xml_topology)
 
     if args.display_infos:

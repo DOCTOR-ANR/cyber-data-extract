@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import yaml
 import requests
@@ -6,7 +6,7 @@ import subprocess
 import argparse
 import time
 
-input_file = "/tmp/gci-data.xml"
+input_file = "/tmp/external-data.xml"
 cybercaptor_file = "/tmp/cybercaptor-input.xml"
 
 parser = argparse.ArgumentParser(description='Converts GCI file to CyberCAPTOR file')
@@ -17,10 +17,14 @@ with open(args.config_file) as f:
     config = yaml.load(f)
     
 delay = int(config['delay'])
-if delay < 2:
+# convention is : negative delay stands for do not loop
+# minimum delay is 2 seconds !
+if 0 < delay < 2:
     delay = 2
 
-while True:
+doLoop = True
+
+while doLoop:
 
     print "begin loop"
 
@@ -38,7 +42,8 @@ while True:
                 with open(input_file, 'w') as f:
                     f.write(request_input.text)
         else:
-            subprocess.check_call(["cp", config['local_input_file'], input_file])
+            if config['local_input_file'] != input_file:
+                subprocess.check_call(["cp", config['local_input_file'], input_file])
 
         if ok == True:
             # convert input
@@ -65,8 +70,11 @@ while True:
             print "[SUCCESS]"
         else:
             print "[FAILURE] bad http result code"
-            
-    print "before sleep"
-    time.sleep(delay)
-    print "end loop"
+    
+    if delay > 0:
+        print "before sleep"
+        time.sleep(delay)
+        print "end loop"
+    else:
+        doLoop = False
 

@@ -9,22 +9,17 @@ mode: local
 # Input :
 # gci : expect input file to be at GCI format
 # mmt : expect input file to be at MMT format
-input: gci
+input: mmt
 
 # URL of the server exposing the topology file
-#source_url: http://10.99.0.1:9999/gci-report.xml
-source_url: http://172.17.22.81:8087/gci-report.txt
+source_url: No_source_URL
 
 # Path for the local report
-#local_input_file: /root/cyber-data-extract/examples/gci-report.xml
-local_input_file: /root/cyber-data-extract/examples/gci-report2.xml
-#local_input_file: /root/cyber-data-extract/examples/mmt-report.xml
+local_input_file: /tmp/external-data.xml
 
 # Base URL of the CyberCAPTOR API
-#cybercaptor_url: http://10.99.0.1:8080/
-cybercaptor_url: http://172.17.22.81:8080/
-#cybercaptor_url: http://172.17.22.82:8087/
+cybercaptor_url: http://cybercaptor:8080/
 
 # delay between consecutive calls, in seconds (default = 120)
-delay: 30
+delay: -1
 
